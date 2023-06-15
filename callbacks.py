@@ -13,6 +13,29 @@ today = date.today()
 # dd/mm/YY day month year
 dmy = today.strftime("%d/%m/%Y")
 
+app.callback(
+    Output("ClientModal", "is_open"),
+    Input("ClientButton", "n_clicks"),
+    State("ClientModal", "is_open"),
+)(toggle_modal)
+
+app.callback(
+    Output("HearingTestContainer", "style"),
+    Input("HearingTestDropdown", "value")
+)(unhide)
+
+app.callback(
+    Output("HearingAidContainer", "style"),
+    Input("HearingAidDropdown", "value")
+)(unhide)
+
+app.callback(
+    Output("PurchaseDateContainer", "style"),
+    Input("PurchaseDropdown", "value")
+)(unhide)
+
+
+
 """ app.callback(
     Output({'type':'stock-input','index':'CAD'},'valid'),
     Output({'type':'stock-input','index':'CAD'},'invalid'),
