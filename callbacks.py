@@ -34,8 +34,29 @@ app.callback(
     Input("PurchaseDropdown", "value")
 )(unhide)
 
-
-
+@app.callback(
+    Output("ClientConfirmToast", "is_open"),
+    Output("ClientFirstName","value"),
+    Output("ClientLastName","value"),
+    Output("ClientEmail","value"),
+    Output("ClientPhone","value"),
+    Output("ClientAddress","value"),
+    Output("ClientPostalCode","value"),
+    Output("ClientCity","value"),
+    Output("ClientProvince","value"),
+    State("ClientFirstName","value"),
+    State("ClientLastName","value"),
+    State("ClientEmail","value"),
+    State("ClientPhone","value"),
+    State("ClientAddress","value"),
+    State("ClientPostalCode","value"),
+    State("ClientCity","value"),
+    State("ClientProvince","value"),
+    Input("ClientConfirm", "n_clicks")
+)
+def ConfirmClient(clicks,firstname,lastname,email,phone,address,postal,city,province):
+    print(firstname,lastname,email,phone,address,postal,city,province)
+    return True,None,None,None,None,None,None,None,None
 """ app.callback(
     Output({'type':'stock-input','index':'CAD'},'valid'),
     Output({'type':'stock-input','index':'CAD'},'invalid'),

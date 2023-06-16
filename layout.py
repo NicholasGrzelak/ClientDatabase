@@ -7,36 +7,64 @@ today = date.today()
 # dd/mm/YY day month year
 dmy = today.strftime("%d/%m/%Y")
 
-#Add in Address, Postal Code, City, Province
 ClientModal = dbc.Modal([
     dbc.ModalHeader(dbc.ModalTitle("Add Client Information")),
     dbc.ModalBody([
         dbc.Row([
             dbc.Col([
                 dbc.FormFloating([
-                    dbc.Input(type="text", placeholder="Bob"),
+                    dbc.Input(id="ClientFirstName",type="text", placeholder="Bob"),
                     dbc.Label("First Name"),
                 ]),
             ]),
             dbc.Col([
                 dbc.FormFloating([
-                dbc.Input(type="text", placeholder="Smith"),
+                dbc.Input(id="ClientLastName",type="text", placeholder="Smith"),
                 dbc.Label("Last Name"),
                 ]),
             ])  
-        ]),
+        ],style={'margin-bottom':'10px'}),
         dbc.Row([
             dbc.FormFloating([
-                dbc.Input(type="email", placeholder="example@gmail.com"),
+                dbc.Input(id="ClientEmail",type="email", placeholder="example@gmail.com"),
                 dbc.Label("Email"),
             ])
-        ]),
+        ],style={'margin-bottom':'10px'}),
         dbc.Row([
             dbc.FormFloating([
-                dbc.Input(type="number", placeholder="999-999-9999"),
+                dbc.Input(id="ClientPhone",type="number", placeholder="999-999-9999"),
                 dbc.Label("Phone Number"),
             ])
-        ]),
+        ],style={'margin-bottom':'10px'}),
+        dbc.Row([
+            dbc.Col([
+                dbc.FormFloating([
+                    dbc.Input(id="ClientAddress",placeholder="12 Sesame Drive"),
+                    dbc.Label("Home Address"),
+                ])
+            ]),
+            dbc.Col([
+                dbc.FormFloating([
+                    dbc.Input(id="ClientPostalCode",placeholder="T1C-7Z5"),
+                    dbc.Label("Postal Code"),
+                ])
+            ]),
+            
+        ],style={'margin-bottom':'10px'}),
+        dbc.Row([
+            dbc.Col([
+                dbc.FormFloating([
+                    dbc.Input(id="ClientCity",placeholder="Toronto"),
+                    dbc.Label("City"),
+                ])
+            ]),
+            dbc.Col([
+                dbc.FormFloating([
+                    dbc.Input(id="ClientProvince",placeholder="Ontario"),
+                    dbc.Label("Province"),
+                ])
+            ]),
+        ],style={'margin-bottom':'10px'}),
         dbc.Row([
             dbc.Col([
                 dbc.Label("Date of Visit: "),
@@ -64,7 +92,7 @@ ClientModal = dbc.Modal([
                     ),
                 ])
             ])
-        ]),
+        ],style={'margin-bottom':'10px'}),
         dbc.Row([
             dbc.Col([
                 dbc.Label("Has a Hearing Aid:")
@@ -72,7 +100,7 @@ ClientModal = dbc.Modal([
             dbc.Col([
                 dcc.Dropdown(['Yes',"No"],'No',id="HearingAidDropdown")
             ])
-        ]),
+        ],style={'margin-bottom':'10px'}),
         #Hearing Aid Container, Appears when Hearing aid = Yes
         #Maybe make Collapse instead of a Div
         html.Div([
@@ -117,7 +145,7 @@ ClientModal = dbc.Modal([
             dbc.Col([
                 dcc.Dropdown(['Yes',"No"],'No',id="HearingTestDropdown")
             ])
-        ]),
+        ],style={'margin-bottom':'10px'}),
         #Hearing Test Container, Appears when Hearing Test = Yes
         dbc.Row([
             dbc.Col([
@@ -141,15 +169,29 @@ ClientModal = dbc.Modal([
             dcc.Textarea(id='NotesText'
             )
         ]),
-        dbc.Row([
-            dbc.Col([]),
-            dbc.Col([]),
-            dbc.Col([
-                dbc.Button(["Confirm"])
-            ])
-        ])
+    ]),
+    dbc.ModalFooter([
+        dbc.Button(["Confirm"],id="ClientConfirm",n_clicks=0,style={'margin-top':'10px'}),
+        dbc.Toast(
+            children=[],
+            id="ClientConfirmToast",
+            header="Client Added",
+            icon="primary",
+            duration=4000,
+            is_open=False
+        )
     ])
 ],id='ClientModal',is_open=False,size="xl")
+
+FollowupModal = dbc.Modal([
+    dbc.ModalHeader(),
+    dbc.ModalBody(),
+    dbc.ModalFooter(),
+])
+
+#
+#Whole Layout
+#
 
 layout = dbc.Container([
     dbc.Row([
