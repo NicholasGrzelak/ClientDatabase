@@ -1,3 +1,4 @@
+import os
 
 def toggle_modal(n1, is_open):
     if n1:
@@ -9,3 +10,6 @@ def unhide(value):
         return {'display':'flex'}
     else:
         return {'display':'None'}
+    
+def checkfile(filename):
+    return os.path.exists(filename)

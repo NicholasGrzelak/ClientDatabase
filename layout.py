@@ -7,6 +7,12 @@ today = date.today()
 # dd/mm/YY day month year
 dmy = today.strftime("%d/%m/%Y")
 
+##
+#MODALS
+##
+
+#Maybe if has hearing aid, then button to add new hearing aid to log peoples hearing aids
+#Need Model, Date, Invoice, Heath Card?
 ClientModal = dbc.Modal([
     dbc.ModalHeader(dbc.ModalTitle("Add Client Information")),
     dbc.ModalBody([
@@ -66,6 +72,12 @@ ClientModal = dbc.Modal([
             ]),
         ],style={'margin-bottom':'10px'}),
         dbc.Row([
+            dbc.FormFloating([
+                dbc.Input(id="ClientHealthCard", placeholder="9999-999-999-AA"),
+                dbc.Label("Health Card"),
+            ])
+        ],style={'margin-bottom':'10px'}),
+        dbc.Row([
             dbc.Col([
                 dbc.Label("Date of Visit: "),
             ]),
@@ -109,7 +121,7 @@ ClientModal = dbc.Modal([
                     dbc.Label("Model:")
                 ]),
                 dbc.Col([
-                    dcc.Dropdown(['One',"Two"],'One')
+                    dcc.Dropdown(['One',"Two"],'One',id='ClientModel')
                 ]),
             ]),
             dbc.Row([
@@ -117,7 +129,7 @@ ClientModal = dbc.Modal([
                     dbc.Label("Purchased at Prosound:")
                 ]),
                 dbc.Col([
-                    dcc.Dropdown(['Yes',"No"],'No',id='PurchaseDropdown')
+                    dcc.Dropdown(['Yes',"No"],'No',id='ClientPurchaseDropdown')
                 ]),  
             ]),
             #Displays only if customer purchases at Prosound
@@ -166,8 +178,7 @@ ClientModal = dbc.Modal([
             dbc.Label('Notes')
         ]),
         dbc.Row([
-            dcc.Textarea(id='NotesText'
-            )
+            dcc.Textarea(id='ClientNotesText')
         ]),
     ]),
     dbc.ModalFooter([
@@ -189,20 +200,50 @@ FollowupModal = dbc.Modal([
     dbc.ModalFooter(),
 ])
 
-#
+##
+##Navbar
+##
+
+navitems = dbc.Row([
+    dbc.Col([
+        dbc.Label('Sales')
+    ]),
+    dbc.Col([
+        dbc.Label('Settings')
+    ]),
+],class_name="ms-auto flex-nowrap mt-3 mt-md-0",align="center")
+
+##
 #Whole Layout
-#
+##
 
 layout = dbc.Container([
+    dbc.Navbar([
+        dbc.Container([
+            dbc.Row([
+                dbc.NavbarBrand('CRM Platform',class_name='ms-2')
+            ],
+            align="center",
+            class_name="g-0"
+            ),
+            dbc.NavbarToggler(id="navbar-toggler",n_clicks=0),
+            dbc.Collapse(navitems,id="navbar-collapse",is_open="false",navbar=True)
+        ],fluid=True),
+    ],style={'margin-bottom':'10px'},expand=True),
     dbc.Row([
-        dbc.Col([dbc.Button(["Add New Client"],id="ClientButton",n_clicks=0)]),
-        dbc.Col([dbc.Button(["Task List"])]),
+        dbc.Col([dbc.Button(["Add New Client"],id="ClientButton",n_clicks=0)],style={'textAlign':'center'}),
+        dbc.Col([dbc.Button(["Task List"])],style={'textAlign':'center'}),
         dbc.Col([
             dbc.Button([
                 "View Followups",dbc.Badge("4",color="White", text_color="primary", className="ms-1"),
             ]),
-        ]),
-    ]),
-    dbc.Row([ClientModal])
-])
+        ],style={'textAlign':'center'}),
+    ],justify="end",class_name='g-0'),
+    dbc.Row([ClientModal],style={'margin-bottom':'20px'},),
+    dbc.Row([
+        dbc.Col([dcc.Dropdown(id="ClientSelectDropdown",options=['A',"B"])],md={"size":4,'offset':3}),
+        dbc.Col([dbc.Button("Open")])
+    ],style={'margin-bottom':'20px'}),
+    dbc.Container([dbc.Label('Nothing Selected')],id="ClientContainer",class_name="border rounded-pill")
+],fluid=True)
 

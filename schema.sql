@@ -1,0 +1,20 @@
+CREATE TABLE clients(
+    firstname text primary key,
+    lastname text,
+    email text,
+    phonenumber text,
+    homeaddress text,
+    postalcode text,
+    city text,
+    province text,
+    healthcard text,
+    datevisit date,
+    datefollowup date,
+    hearingaid boolean,
+    hearingaidmodel text,
+    hearingaidpurchaseprosound boolean,
+    hearingaidpurchasedate date,
+    hearingtest boolean,
+    datetest date,
+    notes text
+);
