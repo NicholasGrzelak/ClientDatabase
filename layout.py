@@ -20,6 +20,12 @@ ClientModal = dbc.Modal([
     dbc.ModalHeader(dbc.ModalTitle("Add Client Information")),
     dbc.ModalBody([
         dbc.Row([
+            dbc.FormFloating([
+                dbc.Input(id="ClientNumber",type="number", placeholder="100"),
+                dbc.Label("Client #"),
+            ],style={'textAlign':'center','margin-bottom':'10px'}),
+        ]),
+        dbc.Row([
             dbc.Col([
                 dbc.FormFloating([
                     dbc.Input(id="ClientFirstName",type="text", placeholder="Bob"),
@@ -293,10 +299,8 @@ layout = dbc.Container([
     ],justify="end",class_name='g-0'),
     dbc.Row([ClientModal,FollowupModal,settingsModal,taskListModal],style={'margin-bottom':'20px'},),
     dbc.Row([
-        dbc.Col([dbc.Button(["Filters"],id="ClientSelectFilter")],md={"size":4,'offset':0},style={'textAlign':'right'}),
+        dbc.Col([dbc.Button(["Filters"],id="ClientSelectFilter")],md={"size":3,'offset':1},style={'textAlign':'right'}),
         dbc.Col([dcc.Dropdown(id="ClientSelectDropdown",options=['A',"B"])],md={"size":4}),
-        #Probably dont need this open button the dropdown can open once selected
-        dbc.Col([dbc.Button("Open")])
     ],style={'margin-bottom':'20px'}),
     #Add in container Purchased Hearing Aid Button
     #Add in Container Inputs so that customer information can be changed
@@ -353,13 +357,13 @@ layout = dbc.Container([
                     dbc.InputGroupText("City"),
                     dbc.Input(id='changeCity')
                 ],class_name='mb-3')
-            ],width=2),
+            ],width=3),
         dbc.Col([
                 dbc.InputGroup([
                     dbc.InputGroupText("Province"),
                     dbc.Input(id='changeProvince')
                 ],class_name='mb-3')
-            ],width=3),
+            ],width=2),
         ]),
     dbc.Row([
         dbc.Col([
@@ -380,51 +384,62 @@ layout = dbc.Container([
             dbc.Row([
                 dbc.Col([
                     dbc.InputGroup([
-                        dbc.InputGroupText("Hearing Aid Make"),
+                        dbc.InputGroupText("Manufacturer"),
                         dbc.Input(id='changeHearingAidMake')
                     ],class_name='mb-3')
-                ]),
+                ],width=3),
                 dbc.Col([
                     dbc.InputGroup([
-                        dbc.InputGroupText("Hearing Aid Model"),
+                        dbc.InputGroupText("Model"),
                         dbc.Input(id='changeHearingAidModel')
                     ],class_name='mb-3')
-                ]),
+                ],width=3),
                 dbc.Col([
                     dbc.InputGroup([
-                        dbc.InputGroupText("Hearing Aid Serial Number"),
+                        dbc.InputGroupText("Serial Number"),
                         dbc.Input(id='changeHearingAidSerial')
                     ],class_name='mb-3')
-                ]),
+                ],width=4),
                 dbc.Col([
                     dbc.InputGroup([
                         dbc.InputGroupText("Paid"),
-                        dcc.Dropdown()
+                        dcc.Dropdown(options=["Yes","No"],id='changePaid',style={'flex':'1 1 auto','align-self':'center'})
                         #Maybe DropdownMenu addons
                         #try to style dcc like dbc dropdown Menu
                         #dbc.Input(id='changeCustomerPaid')
                     ],class_name='mb-3 border border-danger')
-                ]),
-            ]),
+                ],width=2),
+            ],id="changeHearingAidPurchaseDiv"),
             dbc.Row([
                 dbc.Col([
                     dbc.InputGroup([
                         dbc.InputGroupText("Invoice Number"),
                         dbc.Input(id='changeInvoiceNumber')
                     ],class_name='mb-3')
-                ]),
+                ],width=5),
                 dbc.Col([
                     dbc.InputGroup([
                         dbc.InputGroupText("Invoice Amount"),
                         dbc.Input(id='changeInvoiceAmount')
                     ],class_name='mb-3')
-                ]),
-            ])
+                ],width=3),
+                dbc.Col([
+                    dbc.InputGroup([
+                        dbc.InputGroupText("Payment Date"),
+                        dcc.DatePickerSingle(
+                            id='changePaymentDate',
+                            initial_visible_month=date.today(),
+                            date=date.today(),
+                            clearable=True,
+                        ),
+                    ],class_name='mb-3')
+                ],width=4),
+            ],id='changePaymentDiv')
         ])
     ]),
     dbc.Row([
         dbc.Col([
-            dcc.Dropdown(options=["Hearing Test","Hearing Aid Purchase","Ear Cleaning"],multi=True)
+            dcc.Dropdown(options=["Hearing Test","Hearing Aid Purchase","Ear Cleaning"],id="changeAppointmentType",multi=True)
         ]),
         dbc.Col([dbc.Button("Update")]) #only activates if something has been updated
     ])

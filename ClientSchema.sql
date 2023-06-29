@@ -1,5 +1,6 @@
 CREATE TABLE clients(
-    firstname text primary key,
+    clientid number primary key,
+    firstname text,
     lastname text,
     email text,
     phonenumber text,

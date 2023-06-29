@@ -57,6 +57,13 @@ app.callback(
     Input("ClientPurchaseDropdown", "value")
 )(unhide)
 
+# TEMPORARILY DISABLED
+#change so that state of previous div changeHearingAidPurchaseDiv effects current
+# app.callback(
+#     Output("changePaymentDiv", "style"),
+#     Input("changePaid", "value")
+# )(unhide)
+
 #Button should be desiabled until items are filled
 
 #Populates Clientdatabase with all information
@@ -76,6 +83,7 @@ app.callback(
     Output("ClientCity","value"),
     Output("ClientProvince","value"),
 
+    State("ClientNumber","value"),
     State("ClientFirstName","value"),
     State("ClientLastName","value"),
     State("ClientEmail","value"),
@@ -98,7 +106,7 @@ app.callback(
     Input("ClientConfirm", "n_clicks")
 )
 #Problem with SQL is uniqueness needs a key
-def ConfirmClient(firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes,clicks):
+def ConfirmClient(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes,clicks):
     #print(firstname,lastname,email,phone,address,postal,city,province)
     #print(clicks)
     if firstname == None and lastname == None:
@@ -107,21 +115,23 @@ def ConfirmClient(firstname,lastname,email,phone,address,postal,city,province,he
     
     #information should be cleaned here
     #if hearing aid = No then model = None and date = None
-    clientlist = [(firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes)]
+    clientlist = [(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes)]
     db_file = 'database.db'
+    #checks if database file exists
     if checkfile('database.db'):
         print('Database exists')
         with sqlite3.connect(db_file) as conn:
             print('name: '+ firstname)
             print('lastname: ' +lastname)
-            conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist)
-    else:
-        schema_file = 'schema.sql'
+            conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist)
+    else:  
+        #creates database file using sql schema
+        schema_file = 'ClientSchema.sql'
         with open(schema_file,'r') as rf:
             schema = rf.read()
         with sqlite3.connect(db_file) as conn:
             conn.executescript(schema)
-            conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist)
+            conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist)
 
         #firstname, lastname, email, homeaddress, postalcode, city, province, healthcard, datevisit, datefollowup, hearingaid, hearingaidmodel, hearingaidpurchaseprosound, hearingtest, datetest, notes
     return True,None,None,None,None,None,None,None,None
@@ -143,7 +153,7 @@ def GetClients(value):
                    select * from clients
                    """)
         for row in cursor.fetchall():
-            firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = row
+            clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = row
             if firstname == None:
                 pass
             else: 
@@ -152,7 +162,8 @@ def GetClients(value):
     return matchinglist
 
 #Input match 
-
+#Tasks completed
+#Output Store, Input all, state all?
 @app.callback(
     Output({"type": "task", "index": '1'},"value"),
     Output("completedTaskContainer","children"),
@@ -180,14 +191,24 @@ def completeTask(completedtasks,task,checkbox):
 #Display Customer Info
 
 @app.callback(
+    Output('changeID','value'),
     Output('changeFirstName',"value"),
+    Output('changeLastName',"value"),
+    Output('changeEmail',"value"),
+    Output('changePhoneNumber',"value"),
+    Output('changeAddress',"value"),
+    Output('changePostalCode',"value"),
+    Output('changeCity',"value"),
+    Output('changeProvince',"value"),
+    Output('changeHealthCard',"value"),
+    Output('changeNotes',"value"),
     Input("ClientSelectDropdown","value")
 )
 
 def displaydata(client):
     print("client",client)
     if client == None:
-        return None
+        return None,None,None,None,None,None,None,None,None,None,None
     clientlist = client.split(" ")
     print("clientlist", clientlist)
     db_file = 'database.db'
@@ -197,11 +218,77 @@ def displaydata(client):
                    select * from clients
                    """)
         for row in cursor.fetchall():
-            firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = row
+            clientnum, firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = row
             if firstname == clientlist[0]:
                 print(firstname)
-                return firstname
+                return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,clientnotes
             
+@app.callback(
+    Output('ClientNumber',"value"),
+    Input("ClientButton","n_clicks")
+)
+
+def getClientNum(clicks):
+    #Make Database here
+    db_file = 'database.db'
+    if checkfile(db_file):
+        with sqlite3.connect(db_file) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                    select * from clients
+                    """)
+            for row in cursor.fetchall():
+                clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = row
+        return clientnum+1
+    else:  
+        #creates database file using sql schema
+        schema_file = 'ClientSchema.sql'
+        with open(schema_file,'r') as rf:
+            schema = rf.read()
+        with sqlite3.connect(db_file) as conn:
+            conn.executescript(schema)
+        return 100
+
+
+#TEMPORARILY DISABLED, add back ,style={'display':'None'}
+#Display Hearing Aid Purchase     
+# @app.callback(
+#     Output('changeHearingAidPurchaseDiv',"style"),
+#     Input("changeAppointmentType","value"))
+
+# def UnhideHearingAidPurchase(appointmentlist):
+#     #print(appointmentlist)
+#     if appointmentlist == [] or appointmentlist == None:
+#         #print("empty list")
+#         return {'display':'None'}
+#     for typeappt in appointmentlist:
+#         #print(typeappt)
+#         if typeappt == "Hearing Aid Purchase":
+#             #print("yes")
+#             return {'display':'flex'}
+#     return {'display':'None'}
+
+#
+#
+#Notes
+#
+#
+#1. Should make an initalizer to make the database, Client and Payment tables
+#2. Should add functionality to update information
+#2.5 Should add filter functionality to allow multiple things to be searched
+#3. Buttons should be dyamic and only be accessed when information is avaliable
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 """ app.callback(
