@@ -5,14 +5,11 @@ from dash import Output,Input,MATCH,State,ctx,dcc,ALL
 import dash_bootstrap_components as dbc
 import pandas as pd
 from App import app
-from datetime import date
+from datetime import date,datetime
 from functions import *
 import plotly.graph_objects as go
 import sqlite3
-
-today = date.today()
-# dd/mm/YY day month year
-dmy = today.strftime("%d/%m/%Y")
+from dash.exceptions import PreventUpdate
 
 #Modal Toggles
 
@@ -20,6 +17,12 @@ app.callback(
     Output("ClientModal", "is_open"),
     Input("ClientButton", "n_clicks"),
     State("ClientModal", "is_open"),
+)(toggle_modal)
+
+app.callback(
+    Output("hearingAidModal", "is_open"),
+    Input("ClientAddHearingAid", "n_clicks"),
+    State("hearingAidModal", "is_open"),
 )(toggle_modal)
 
 app.callback(
@@ -105,24 +108,30 @@ app.callback(
 
     Input("ClientConfirm", "n_clicks")
 )
-#Problem with SQL is uniqueness needs a key
 def ConfirmClient(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes,clicks):
-    #print(firstname,lastname,email,phone,address,postal,city,province)
-    #print(clicks)
+    #Filters out pay information
     if firstname == None and lastname == None:
         print('No data to input')
         return False,None,None,None,None,None,None,None,None
     
     #information should be cleaned here
     #if hearing aid = No then model = None and date = None
+
+    #makes list of all data
     clientlist = [(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes)]
     db_file = 'database.db'
+
+    if createDatabase():
+        with sqlite3.connect(db_file) as conn:
+            conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist)
+            return True,None,None,None,None,None,None,None,None
+
     #checks if database file exists
-    if checkfile('database.db'):
+    """ if checkfile('database.db'):
         print('Database exists')
         with sqlite3.connect(db_file) as conn:
-            print('name: '+ firstname)
-            print('lastname: ' +lastname)
+            #print('name: '+ firstname)
+            #print('lastname: ' +lastname)
             conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist)
     else:  
         #creates database file using sql schema
@@ -131,10 +140,10 @@ def ConfirmClient(clientnum,firstname,lastname,email,phone,address,postal,city,p
             schema = rf.read()
         with sqlite3.connect(db_file) as conn:
             conn.executescript(schema)
-            conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist)
+            conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist) """
 
         #firstname, lastname, email, homeaddress, postalcode, city, province, healthcard, datevisit, datefollowup, hearingaid, hearingaidmodel, hearingaidpurchaseprosound, hearingtest, datetest, notes
-    return True,None,None,None,None,None,None,None,None
+    return False,None,None,None,None,None,None,None,None
 
 #Populates Dropdown with all client Information
 @app.callback(
@@ -206,23 +215,64 @@ def completeTask(completedtasks,task,checkbox):
 )
 
 def displaydata(client):
-    print("client",client)
+    """Gets and displays a clients data"""
     if client == None:
         return None,None,None,None,None,None,None,None,None,None,None
     clientlist = client.split(" ")
-    print("clientlist", clientlist)
-    db_file = 'database.db'
-    with sqlite3.connect(db_file) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-                   select * from clients
-                   """)
-        for row in cursor.fetchall():
-            clientnum, firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = row
-            if firstname == clientlist[0]:
-                print(firstname)
-                return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,clientnotes
+    clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,clientnotes = getClient(clientlist[0],clientlist[1])
+    return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,clientnotes
+
+    #print("clientlist", clientlist)
+    # db_file = 'database.db'
+    # with sqlite3.connect(db_file) as conn:
+    #     cursor = conn.cursor()
+    #     cursor.execute("""
+    #                select * from clients
+    #                """)
+    #     for row in cursor.fetchall():
+    #         clientnum, firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = row
+    #         if firstname == clientlist[0]:
+    #             #print(firstname)
+    #             return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,clientnotes
             
+@app.callback(
+    Output('ClientUpdateToast','is_open'),
+    Input('changeClientInfo','n_clicks'),
+    State('changeID','value'),
+    State('changeFirstName',"value"),
+    State('changeLastName',"value"),
+    State('changeEmail',"value"),
+    State('changePhoneNumber',"value"),
+    State('changeAddress',"value"),
+    State('changePostalCode',"value"),
+    State('changeCity',"value"),
+    State('changeProvince',"value"),
+    State('changeHealthCard',"value"),
+    State('changeNotes',"value"),
+)
+
+def updateDatabase(clicks,ID,first,last,emailad,phone,address,postal,cit,prov,health,notes):
+    if ID == None:
+        return False
+    else:
+        ID = str(ID)
+    db_file = 'database.db'
+    if checkfile(db_file):
+        with sqlite3.connect(db_file) as conn:
+            cursor = conn.cursor()
+
+            #Gets current info, not sure why we would do this
+            #cursor.execute(" SELECT * FROM clients WHERE clientid = " + ID)
+            #clientnum, oldfirst,oldname,oldemail,oldphone,oldaddress,oldpostal,oldcity,oldprovince,oldhealth,olddov,oldfollowup,oldhasHearingAid,oldhearingAidModel,oldProsoundPurchase,oldProsoundpurchasedate,oldhasHearingTestdate,oldHearingtestdate,oldnotes = cursor.fetchall()[0]
+            #print('old notes', oldnotes)
+            #print('new notes', notes)
+
+            updatedata = (first,last,emailad,phone,address,postal,cit,prov,health,notes)
+            cursor.execute("UPDATE clients SET firstname = ? ,lastname = ?,email = ?,phonenumber = ?,homeaddress = ?,postalcode = ?,city = ?,province = ?,healthcard = ?,notes =? WHERE clientid = " +ID,updatedata)
+    
+            #  datevisit, datefollowup, hearingaid, hearingaidmodel, hearingaidpurchaseprosound, hearingaidpurchasedate, hearingtest, datetest,
+    return True
+
 @app.callback(
     Output('ClientNumber',"value"),
     Input("ClientButton","n_clicks")
@@ -249,7 +299,66 @@ def getClientNum(clicks):
             conn.executescript(schema)
         return 100
 
+@app.callback(
+    Output('FollowUpsContainer',"children"),
+    Input("followUpButton","n_clicks"),
+    Input('FollowUpSettings','value')
+)
 
+def populateFollowUps(clicks,setting):
+    #Makes a date to compare to, if ccompare date = actual follow up
+    #or if compare date is smaller than actual follow up
+    #print(setting)
+    today = date.today()
+
+    outputlist = []
+
+    clientlist = getAllClients()
+    for client in clientlist:
+        clientnum, tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = client
+        date_object = datetime.strptime(followupdate, '%Y-%m-%d').date()
+        comparedate = generateDate(date_object,setting)
+        #print('last followed up:',date_object)
+        #print('date when follow up should happen:', date_object+relativedelta(months=+3))
+        #print('date when follow up is calculated:', comparedate)
+        if comparedate <= today:
+            newrow = dbc.Row([
+                dbc.Col([dbc.Label(tablefirstname)],width=1),
+                dbc.Col([dbc.Label(tablelastname)],width=1),
+                dbc.Col([dbc.Label(email)],width=4),
+                dbc.Col([dbc.Label(phone)],width=4),
+                dbc.Col([
+                    dbc.Button(id={'type':'followButton','index':clientnum},n_clicks=0,children=["Followed Up"])
+                ],width=2),
+            ],id={'type':'followClientRow','index':clientnum},style={'margin-bottom':'10px'})
+            outputlist.append(newrow)
+    return outputlist
+
+@app.callback(
+    Output({'type':'followClientRow','index':MATCH},"style"),
+    Input({'type':'followButton','index':MATCH},"n_clicks"),
+    prevent_initial_call=True
+)
+
+def clientFollowUp(clicks):
+    trigger = ctx.triggered_id
+    clinum = trigger['index']
+    updated = updateClientbyNum(clinum)
+    if updated:
+        return {'display':'None'}
+    else:
+        return {'display':'flex'}
+    
+#Displays how many follow ups
+@app.callback(
+    Output('followUpBadge',"children"),
+    Input({'type':'followButton','index':ALL},"children")
+)
+
+def clientFollowUp(children):
+    #print(children,len(children))
+    return str(len(children))
+    
 #TEMPORARILY DISABLED, add back ,style={'display':'None'}
 #Display Hearing Aid Purchase     
 # @app.callback(

@@ -4,10 +4,6 @@ from datetime import date
 #All the buttons should open seperate Windows
 #Popovers to provide tool tips
 
-today = date.today()
-# dd/mm/YY day month year
-dmy = today.strftime("%d/%m/%Y")
-
 ##
 #MODALS
 ##
@@ -115,6 +111,11 @@ ClientModal = dbc.Modal([
             ])
         ],style={'margin-bottom':'10px'}),
         dbc.Row([
+            dbc.Col([]),
+            dbc.Col([dbc.Button('Add Hearing Aid',id='ClientAddHearingAid',n_clicks=0)]),
+            dbc.Col([]),
+        ]),
+        dbc.Row([
             dbc.Col([
                 dbc.Label("Has a Hearing Aid:")
             ]),
@@ -203,18 +204,37 @@ ClientModal = dbc.Modal([
     ])
 ],id='ClientModal',is_open=False,size="xl")\
 
+#Aid Hearing Aid Modal
+hearingaidmodal = dbc.Modal([
+    dbc.ModalHeader(dbc.ModalTitle('Add Hearing Aid')),
+    dbc.ModalBody([
+        "test"
+    ])
+],id='hearingAidModal')
+
+
 #Follow Up Modal
 # Should have name, email, phonenumber
 # On the right of each client should have option to follow up or couldnt get ahold of
 FollowupModal = dbc.Modal([
     dbc.ModalHeader(dbc.ModalTitle("Client Follow Ups")),
-    dbc.ModalBody(),
+    dbc.ModalBody([
+        dbc.Container(id="FollowUpsContainer")
+    ]),
     dbc.ModalFooter(),
 ],id='followUpModal',is_open=False,size="xl")
 
+#
+
 settingsModal = dbc.Modal([
     dbc.ModalHeader(dbc.ModalTitle("Settings")),
-    dbc.ModalBody(),
+    dbc.ModalBody([
+        dbc.Row([dbc.Label('Client Settings')]),
+        dbc.Row([
+            dbc.Col([dbc.Label('Follow Up After: ')]),
+            dbc.Col([dcc.Dropdown(options=['3 months','6 months','12 months'],placeholder='6 months',id="FollowUpSettings")])
+        ])
+    ]),
     dbc.ModalFooter(),
 ],id='settingsModal',is_open=False,size="xl")
 
@@ -291,13 +311,12 @@ layout = dbc.Container([
         dbc.Col([
             dbc.Button(
                 [
-                    "View Followups",
-                    dbc.Badge("4",color="White", text_color="primary", className="ms-1"),
+                    "View Followups",dbc.Badge("4",id="followUpBadge",color="secondary", text_color="primary",pill=True, className="ms-1")
                 ],
                 id="followUpButton")]
             ,style={'textAlign':'center'}),
     ],justify="end",class_name='g-0'),
-    dbc.Row([ClientModal,FollowupModal,settingsModal,taskListModal],style={'margin-bottom':'20px'},),
+    dbc.Row([ClientModal,FollowupModal,settingsModal,taskListModal,hearingaidmodal],style={'margin-bottom':'20px'},),
     dbc.Row([
         dbc.Col([dbc.Button(["Filters"],id="ClientSelectFilter")],md={"size":3,'offset':1},style={'textAlign':'right'}),
         dbc.Col([dcc.Dropdown(id="ClientSelectDropdown",options=['A',"B"])],md={"size":4}),
@@ -441,7 +460,17 @@ layout = dbc.Container([
         dbc.Col([
             dcc.Dropdown(options=["Hearing Test","Hearing Aid Purchase","Ear Cleaning"],id="changeAppointmentType",multi=True)
         ]),
-        dbc.Col([dbc.Button("Update")]) #only activates if something has been updated
+        dbc.Col([
+            dbc.Button("Update",id='changeClientInfo',n_clicks=0),
+            dbc.Toast(
+                children=[],
+                id="ClientUpdateToast",
+                header="Client Updated",
+                icon="primary",
+                duration=4000,
+                is_open=False
+            )
+        ]) #only activates if something has been updated
     ])
     ],id="ClientContainer",class_name="border rounded-pill")
 ],fluid=True)
