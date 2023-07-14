@@ -3,8 +3,12 @@ CREATE TABLE sales(
     clientnumber number,
     manufacturer text,
     model text,
-    serialnum number,
+    type text,
+    Lserialnum number,
+    Rserialnum number,
+    dispensedate date,
     invoicepaid boolean,
     paymentdate date,
-    paymentamount number
+    paymentamount number,
+    status text
 );

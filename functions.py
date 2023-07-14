@@ -2,6 +2,9 @@ import os
 import sqlite3
 from datetime import date
 from dateutil.relativedelta import relativedelta
+import base64
+import io
+import pandas as pd
 
 def toggle_modal(n1, is_open):
     if n1:
@@ -24,13 +27,17 @@ def createDatabase():
     else:
         schema_file = 'ClientSchema.sql'
         payment_file = 'PaymentSchema.sql'
+        data_file = 'DataSchema.sql'
         with open(schema_file,'r') as rf:
             schemacli = rf.read()
         with open(payment_file,'r') as rfp:
             schemapay = rfp.read()
+        with open(data_file,'r') as rfp:
+            schemadata = rfp.read()
         with sqlite3.connect(db_file) as conn:
             conn.executescript(schemacli)
             conn.executescript(schemapay)
+            conn.executescript(schemadata)
         return True
     
 def getClient(firstname,lastname):
@@ -40,10 +47,10 @@ def getClient(firstname,lastname):
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM clients WHERE firstname = ? AND lastname= ?",(firstname,lastname))
         for row in cursor.fetchall():
-            clientnum, tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = row
+            clientnum, tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = row
             if firstname == tablefirstname:
                 #print(firstname)
-                return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,clientnotes
+                return clientnum,tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status
     #error clause here
 
 def getAllClients():
@@ -62,8 +69,8 @@ def getClientByNum(num):
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM clients WHERE clientid",num)
         for row in cursor.fetchall():
-            clientnum, tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = row
-            return clientnum,tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,clientnotes
+            clientnum, tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = row
+            return clientnum,tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,clientnotes,status
         
 def updateClientbyNum(ID):
     if ID == None:
@@ -88,17 +95,50 @@ def generateDate(dof,datesetting):
     if datesetting == "6 months":
         newdate = dof + relativedelta(months=+6)
         return newdate
-    if datesetting == '3 months':
+    elif datesetting == '3 months':
         newdate = dof + relativedelta(months=+3)
         return newdate
-    if datesetting == '12 months':
+    elif datesetting == '12 months':
         newdate = dof + relativedelta(months=+12)
+        return newdate
+    elif datesetting == '14 days':
+        newdate = dof + relativedelta(days=+14)
+        return newdate
+    elif datesetting == '28 days':
+        newdate = dof + relativedelta(days=+28)
+        return newdate
+    elif datesetting == '30 days':
+        newdate = dof + relativedelta(days=+30)
+        return newdate
+    elif datesetting == '45 days':
+        newdate = dof + relativedelta(days=+45)
+        return newdate
+    elif datesetting == '60 days':
+        newdate = dof + relativedelta(days=+60)
         return newdate
     else:
         return dof
     
-""" compd = generateDate('3 months')
-today = date(2024,7,5)
+def getSalesByClient(clientnumber):
+    """Query the database to find all sales matching a client"""
+    db_file = 'database.db'
+    clientnumber = str(clientnumber)
+    with sqlite3.connect(db_file) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM sales WHERE clientnumber = " +clientnumber)
+        salesList = cursor.fetchall()
+    return salesList
+
+def readExcel(file):
+    content_type, content_string = file.split(',')
+
+    decoded = base64.b64decode(content_string)
+    df = pd.read_excel(io.BytesIO(decoded))
+    
+    return df
+        
+""" today = date(2023,7,10)
+compd = generateDate(today,'12 months')
 print('gendate: ', compd)
 print('today: ', today)
 

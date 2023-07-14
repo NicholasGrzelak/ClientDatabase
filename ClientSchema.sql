@@ -11,11 +11,8 @@ CREATE TABLE clients(
     healthcard text,
     datevisit date,
     datefollowup date,
-    hearingaid boolean,
-    hearingaidmodel text,
-    hearingaidpurchaseprosound boolean,
-    hearingaidpurchasedate date,
     hearingtest boolean,
     datetest date,
-    notes text
+    notes text,
+    status text
 );
