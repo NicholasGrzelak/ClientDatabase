@@ -143,7 +143,11 @@ def ConfirmClient(clientnum,firstname,lastname,email,phone,address,postal,city,p
 
     #makes list of all data
     clientlist = [(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,True)]
-    hearingaidlist= [(hearingAidInvoice,clientnum,hearingAidManufacture,hearingAidModel,hearingAidType,LSerial,RSerial,hearinghaspaid,Prosoundpurchasedate,hearingpaidamount)]
+    #need quan, msrp
+    status = 'Returned'
+    quan=1
+    msrp=100
+    hearingaidlist= [(hearingAidInvoice,clientnum,hearingAidManufacture,hearingAidModel,hearingAidType,LSerial,RSerial,hearinghaspaid,Prosoundpurchasedate,hearingpaidamount,status,quan,msrp)]
     #hearingAidModel,Prosoundpurchasedate,
     db_file = 'database.db'
 
@@ -261,7 +265,7 @@ def displaydata(client):
         return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,dateofvisit,followupdate,clientnotes,None,None,None,None,None,None,None,None,today
     else:
         print(saleslist)
-        Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,dispensdate,Paid,Date,Amount,status = saleslist[0]
+        Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,dispensdate,Paid,Date,Amount,status,quan,msrp = saleslist[0]
         #No Type
         return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,clientnotes,Make,Model,Type,Lserial,Rserial,Paid,Invoice,Amount,Date
 
@@ -389,11 +393,11 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
                 Model = None
             else:
                 for sale in saleslist:
-                    Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,dispensedate,Paid,payDate,Amount,aidstat = sale
+                    Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,dispensedate,Paid,payDate,Amount,aidstat,quan,msrp = sale
                     if Invoice is not None and Paid == "Yes" and Amount is not None:
                         pass
                     else:
-                        Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,Paid,payDate,Amount = sale
+                        Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,Paid,payDate,Amount,quan,msrp = sale
 
             #,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate
             date_object = datetime.strptime(followupdate, '%Y-%m-%d').date()
@@ -515,8 +519,10 @@ def dataUpload(contents):
     if contents is None:
         return False
     else:
+        today = date.today()
         dataframe = readExcel(contents)
         cnx = sqlite3.connect('database.db')
+        dataframe['dateadded'] = today
         dataframe.to_sql(name='MSRP',con=cnx,if_exists="append",index=False)
         return True
     
@@ -537,7 +543,7 @@ def findType(Model):
             cursor.execute("SELECT * FROM MSRP")
             listmodel = cursor.fetchall()
             for hearingaid in listmodel:
-                man,make,typ,price = hearingaid
+                man,make,typ,price,date = hearingaid
                 if Model == make:
                     if make not in Outputlist:
                         Outputlist.append(typ)
@@ -560,7 +566,7 @@ def findMake(manuf):
             cursor.execute("SELECT * FROM MSRP")
             listmodel = cursor.fetchall()
             for hearingaid in listmodel:
-                man,make,typ,price = hearingaid
+                man,make,typ,price,date = hearingaid
                 if manuf == man:
                     if make not in Outputlist:
                         Outputlist.append(make)
@@ -603,6 +609,10 @@ def findMake(manuf):
 #7. Add in cost part to calulate profit, must be done by time
 #8. Add in Client import feature
 #9. Add in how new hearing aid data can be added
+#10. Quantity and MSRP to hearing aid sales
+#11. Date to hearing aid datasheet
+#12. Add password to database
+#13. Password to sign in
 
 
 

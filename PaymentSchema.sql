@@ -10,5 +10,7 @@ CREATE TABLE sales(
     invoicepaid boolean,
     paymentdate date,
     paymentamount number,
-    status text
+    status text,
+    quantity number,
+    msrp text
 );
