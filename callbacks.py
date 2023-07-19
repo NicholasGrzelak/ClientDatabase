@@ -102,6 +102,10 @@ app.callback(
     Output('HearingAidPaidInvoice',"value"),
     Output("ClientHearingAidPurchase","date"),
     Output('HearingAidPaymentAmount',"value"),
+    Output('ClientHearingAidQuantity',"value"),
+    Output('ClientHearingAidStatus',"value"),
+    Output("ClientHearingAidDispenseDate","date"),
+    Output('ClientHearingAidMSRP',"value"),
     #Getting Client Info
     State("ClientNumber","value"),
     State("ClientFirstName","value"),
@@ -128,34 +132,34 @@ app.callback(
     State('HearingAidPaidInvoice',"value"),
     State("ClientHearingAidPurchase","date"),
     State('HearingAidPaymentAmount',"value"),
+    State('ClientHearingAidQuantity',"value"),
+    State('ClientHearingAidStatus',"value"),
+    State("ClientHearingAidDispenseDate","date"),
+    State('ClientHearingAidMSRP',"value"),
     #Button Press Input
     Input("ClientConfirm", "n_clicks")
 )
-def ConfirmClient(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,hearingAidInvoice,hearingAidManufacture,hearingAidModel,hearingAidType,LSerial,RSerial,hearinghaspaid,Prosoundpurchasedate,hearingpaidamount,clicks):
+def ConfirmClient(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,hearingAidInvoice,hearingAidManufacture,hearingAidModel,hearingAidType,LSerial,RSerial,hearinghaspaid,Prosoundpurchasedate,hearingpaidamount,quan,aidstatus,dispensedate,msrp,clicks):
     #Filters out pay information
     today = date.today()
     if firstname == None and lastname == None:
-        #print('No data to input')
-        return False,None,None,None,None,None,None,None,None,None,today,today,None,today,None,None,None,None,None,None,None,None,today,None
+        return False,None,None,None,None,None,None,None,None,None,today,today,None,today,None,None,None,None,None,None,None,None,today,None,None,None,today,None
     
     #information should be cleaned here
     #if hearing aid = No then model = None and date = None
 
     #makes list of all data
-    clientlist = [(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,True)]
-    #need quan, msrp
-    status = 'Returned'
-    quan=1
-    msrp=100
-    hearingaidlist= [(hearingAidInvoice,clientnum,hearingAidManufacture,hearingAidModel,hearingAidType,LSerial,RSerial,hearinghaspaid,Prosoundpurchasedate,hearingpaidamount,status,quan,msrp)]
-    #hearingAidModel,Prosoundpurchasedate,
+    clientlist = [(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,'Open')]    
+    hearingaidlist= [(hearingAidInvoice,clientnum,hearingAidManufacture,hearingAidModel,hearingAidType,LSerial,RSerial,dispensedate,hearinghaspaid,Prosoundpurchasedate,hearingpaidamount,aidstatus,quan,msrp)]
+    
     db_file = 'database.db'
 
     if createDatabase():
         with sqlite3.connect(db_file) as conn:
             conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist)
-            conn.executemany("insert into sales values (?,?,?,?,?,?,?,?,?,?)",hearingaidlist)
-            return True,None,None,None,None,None,None,None,None,None,today,today,None,today,None,None,None,None,None,None,None,None,today,None
+            if hearingAidInvoice != None:
+                conn.executemany("insert into sales values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",hearingaidlist)
+            return True,None,None,None,None,None,None,None,None,None,today,today,None,today,None,None,None,None,None,None,None,None,today,None,None,None,today,None
 
     #checks if database file exists
     """ if checkfile('database.db'):
@@ -174,7 +178,7 @@ def ConfirmClient(clientnum,firstname,lastname,email,phone,address,postal,city,p
             conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist) """
 
         #firstname, lastname, email, homeaddress, postalcode, city, province, healthcard, datevisit, datefollowup, hearingaid, hearingaidmodel, hearingaidpurchaseprosound, hearingtest, datetest, notes
-    return False,None,None,None,None,None,None,None,None,None,today,today,None,today,None,None,None,None,None,None,None,None,today,None
+    return False,None,None,None,None,None,None,None,None,None,today,today,None,today,None,None,None,None,None,None,None,None,today,None,None,None,today,None
 
 #Populates Dropdown with all client Information
 @app.callback(
@@ -230,6 +234,7 @@ def completeTask(completedtasks,task,checkbox):
     Output('changeID','value'),
     Output('changeFirstName',"value"),
     Output('changeLastName',"value"),
+    Output('changeStatus','value'),
     Output('changeEmail',"value"),
     Output('changePhoneNumber',"value"),
     Output('changeAddress',"value"),
@@ -239,6 +244,7 @@ def completeTask(completedtasks,task,checkbox):
     Output('changeHealthCard',"value"),
     Output('changeVisitDate',"date"),
     Output('changeFollowDate',"date"),
+    #Should add test date
     Output('changeNotes',"value"),
     #Bottom information
     Output('changeHearingAidMake','value'),
@@ -250,24 +256,29 @@ def completeTask(completedtasks,task,checkbox):
     Output('changeInvoiceNumber',"value"),
     Output('changeInvoiceAmount',"value"),
     Output('changePaymentDate',"date"),
-    Input("ClientSelectDropdown","value")
+    Output('changeAidStatus',"value"),
+    Output('changeDispenseDate',"date"),
+    Output('changeQuan',"value"),
+    Output('changeMSRP',"value",allow_duplicate=True),
+    Input("ClientSelectDropdown","value"),
+    prevent_initial_call=True
 )
 
 def displaydata(client):
     """Gets and displays a clients data"""
     today = date.today()
     if client == None:
-        return None,None,None,None,None,None,None,None,None,None,today,today,None,None,None,None,None,None,None,None,None,today
+        return None,None,None,None,None,None,None,None,None,None,None,today,today,None,None,None,None,None,None,None,None,None,today,None,today,None,None
     clientlist = client.split(" ")
     clientnum, firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = getClient(clientlist[0],clientlist[1])
     saleslist = getSalesByClient(clientnum)
     if saleslist == []:
-        return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,dateofvisit,followupdate,clientnotes,None,None,None,None,None,None,None,None,today
+        return clientnum,firstname,lastname,status,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,dateofvisit,followupdate,clientnotes,None,None,None,None,None,None,None,None,today,None,today,None,None
     else:
-        print(saleslist)
-        Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,dispensdate,Paid,Date,Amount,status,quan,msrp = saleslist[0]
-        #No Type
-        return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,clientnotes,Make,Model,Type,Lserial,Rserial,Paid,Invoice,Amount,Date
+        #print(saleslist)
+        Invoice,clientnumber,Make,Model,Typea,Lserial,Rserial,dispensdate,Paid,Date,Amount,aidstatus,quan,msrp = saleslist[0]
+        #print(clientnum,firstname,lastname,status,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,clientnotes,Make,Model,Type,Lserial,Rserial,Paid,Invoice,Amount,Date,aidstatus,dispensdate,quan,msrp)
+        return clientnum,firstname,lastname,status,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,clientnotes,Make,Model,Typea,Lserial,Rserial,Paid,Invoice,Amount,Date,aidstatus,dispensdate,quan,msrp
 
     #print("clientlist", clientlist)
     # db_file = 'database.db'
@@ -281,13 +292,15 @@ def displaydata(client):
     #         if firstname == clientlist[0]:
     #             #print(firstname)
     #             return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,clientnotes
-            
+
+#Update Database for client in full view  
 @app.callback(
     Output('ClientUpdateToast','is_open'),
     Input('changeClientInfo','n_clicks'),
     State('changeID','value'),
     State('changeFirstName',"value"),
     State('changeLastName',"value"),
+    State('changeStatus',"value"),
     State('changeEmail',"value"),
     State('changePhoneNumber',"value"),
     State('changeAddress',"value"),
@@ -296,28 +309,67 @@ def displaydata(client):
     State('changeProvince',"value"),
     State('changeHealthCard',"value"),
     State('changeNotes',"value"),
+    #Bottom Part
+    State('changeInvoiceNumber',"value"),
+    State('changeAidStatus',"value"),
+    State('changeDispenseDate','date'),
+    State('changeQuan','value'),
+    State('changeHearingAidMake','value'),
+    State('changeHearingAidModel','value'),
+    State('changeHearingAidType','value'),
+    State('changeHearingAidLSerial','value'),
+    State('changeHearingAidRSerial','value'),
+    State('changePaid','value'),
+    State('changePaymentDate','date'),
+    State('changeInvoiceAmount','value'),
+    State('changeMSRP','value'),
+    State("changeAppointmentType",'value')
 )
 
-def updateDatabase(clicks,ID,first,last,emailad,phone,address,postal,cit,prov,health,notes):
+def updateDatabase(clicks,ID,first,last,status,emailad,phone,address,postal,cit,prov,health,notes,invoicenum,aidstatus,dispensedate,quan,manu,model,typea,lserial,rserial,paidbol,paydate,payamount,msrp,appt):
     if ID == None:
         return False
     else:
         ID = str(ID)
+    if invoicenum != None:
+        invoicenum = str(invoicenum)
     db_file = 'database.db'
-    if checkfile(db_file):
+    if createDatabase():
+        
+        
+        testlist=["Hearing Test","Hearing Aid Dispensing","Hearing Aid Purchase","Ear Cleaning"]
+        #appt can be a list
+        
+
         with sqlite3.connect(db_file) as conn:
             cursor = conn.cursor()
 
-            #Gets current info, not sure why we would do this
-            #cursor.execute(" SELECT * FROM clients WHERE clientid = " + ID)
-            #clientnum, oldfirst,oldname,oldemail,oldphone,oldaddress,oldpostal,oldcity,oldprovince,oldhealth,olddov,oldfollowup,oldhasHearingAid,oldhearingAidModel,oldProsoundPurchase,oldProsoundpurchasedate,oldhasHearingTestdate,oldHearingtestdate,oldnotes = cursor.fetchall()[0]
-            #print('old notes', oldnotes)
-            #print('new notes', notes)
+            #Gets current info
+            cursor.execute(" SELECT * FROM clients WHERE clientid = " + ID)
+            clientnum, oldfirst,oldlast,oldemail,oldphone,oldaddress,oldpostal,oldcity,oldprovince,oldhealth,visitdate,followup,testbool,testdate,oldnotes,oldstatus = cursor.fetchall()[0]
+            
+            if "Hearing Test" in appt:
+                testbool=True
+                testdate=date.today()
+                visitdate=date.today()
+                followup=date.today()
+            if "Ear Cleaning" in appt:
+                visitdate=date.today()
+                followup=date.today()
+            if "Hearing Aid Purchase" in appt or "Hearing Aid Dispensing" in appt:
+                followup=date.today()
+                salesdata= [ID,manu,model,typea,lserial,rserial,dispensedate,paidbol,paydate,payamount,aidstatus,quan,msrp]
+                cursor.execute("UPDATE sales SET clientnumber= ?,manufacturer = ?,model = ?,type = ?,Lserialnum = ?,Rserialnum = ?,dispensedate = ?,invoicepaid = ?,paymentdate = ?,paymentamount = ?,status = ?,quantity = ?,msrp =? WHERE invoicenumber = " +invoicenum,salesdata)
 
-            updatedata = (first,last,emailad,phone,address,postal,cit,prov,health,notes)
-            cursor.execute("UPDATE clients SET firstname = ? ,lastname = ?,email = ?,phonenumber = ?,homeaddress = ?,postalcode = ?,city = ?,province = ?,healthcard = ?,notes =? WHERE clientid = " +ID,updatedata)
+
+            updatedata=[first,last,emailad,phone,address,postal,cit,prov,health,visitdate,followup,testbool,testdate,notes,status]
+            cursor.execute("UPDATE clients SET firstname = ? ,lastname = ?,email = ?,phonenumber = ?,homeaddress = ?,postalcode = ?,city = ?,province = ?,healthcard = ?,datevisit = ?,datefollowup = ?,hearingtest = ?,datetest = ?,notes =?,status=? WHERE clientid = " +ID,updatedata)
+
+            #updatedata = (first,last,emailad,phone,address,postal,cit,prov,health,notes,status)
+            #cursor.execute("UPDATE clients SET firstname = ? ,lastname = ?,email = ?,phonenumber = ?,homeaddress = ?,postalcode = ?,city = ?,province = ?,healthcard = ?,notes =?,status=? WHERE clientid = " +ID,updatedata)
     
             #  datevisit, datefollowup, hearingaid, hearingaidmodel, hearingaidpurchaseprosound, hearingaidpurchasedate, hearingtest, datetest,
+
     return True
 
 @app.callback(
@@ -352,6 +404,8 @@ def getClientNum(clicks):
 )
 def updateClientNumberHearingAid(num):
     return num
+
+#Populates Entire Follow up Modal
 
 @app.callback(
     Output('FollowUpsContainer',"children"),
@@ -397,7 +451,7 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
                     if Invoice is not None and Paid == "Yes" and Amount is not None:
                         pass
                     else:
-                        Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,Paid,payDate,Amount,quan,msrp = sale
+                        Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,dispensedate,Paid,payDate,Amount,aidstat,quan,msrp = sale
 
             #,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate
             date_object = datetime.strptime(followupdate, '%Y-%m-%d').date()
@@ -470,6 +524,8 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
         print('Populate FollowUps Error: ' + EGC)
         return None
 
+#Hides Clients that have been followed up with
+
 @app.callback(
     Output({'type':'followClientRow','index':MATCH},"style"),
     Input({'type':'followButton','index':MATCH},"n_clicks"),
@@ -485,7 +541,7 @@ def clientFollowUp(clicks):
     else:
         return {'display':'flex'}
     
-#Displays how many follow ups
+#Displays how many follow ups on outside badge
 @app.callback(
     Output('followUpBadge',"children"),
     Input({'type':'followButton','index':ALL},"children")
@@ -494,6 +550,8 @@ def clientFollowUp(clicks):
 def clientFollowUp(children):
     #print(children,len(children))
     return str(len(children))
+
+#UPLOADS CLIENTS IN BATCH LIST (WIP)
 
 @app.callback(
     Output('ClientUploadConfirm',"is_open"),
@@ -526,51 +584,70 @@ def dataUpload(contents):
         dataframe.to_sql(name='MSRP',con=cnx,if_exists="append",index=False)
         return True
     
-#FIND HEARING AID TYPE FROM DATABASE
+#FIND HEARING AID TYPE FROM DATABASE OUTPUT TO FULL VIEW
 @app.callback(
     Output("changeHearingAidType", "options"),
     Input("changeHearingAidModel", "value")
-    )
+)(findType)
 
-def findType(Model):
-    if Model == None:
-        return []
-    db_file = 'database.db'
-    Outputlist=[]
-    if createDatabase():
-        with sqlite3.connect(db_file) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM MSRP")
-            listmodel = cursor.fetchall()
-            for hearingaid in listmodel:
-                man,make,typ,price,date = hearingaid
-                if Model == make:
-                    if make not in Outputlist:
-                        Outputlist.append(typ)
-            return Outputlist
-
-#FIND HEARING AID MODEL FROM DATABASE
+#FIND HEARING AID MODEL FROM DATABASE OUTPUT TO FULL VIEW
 @app.callback(
     Output("changeHearingAidModel", "options"),
     Input("changeHearingAidMake", "value")
+)(findMake)
+
+#FIND HEARING AID TYPE FROM DATABASE OUTPUT TO ADD CLIENT VIEW
+@app.callback(
+    Output('ClientHearingAidType', "options"),
+    Input('ClientHearingAidModel', "value")
+)(findType)
+   
+#FIND HEARING AID MODEL FROM DATABASE OUTPUT TO ADD CLIENT VIEW
+@app.callback(
+    Output('ClientHearingAidModel', "options"),
+    Input('ClientHearingAidManufacturer', "value")
+)(findMake)
+
+#Gets MSRP when full view Client
+@app.callback(
+    Output("changeMSRP", "value"),
+    Input('changeQuan', "value"),
+    State('changeHearingAidType','value'),
+    State('changeHearingAidModel','value')
     )
 
-def findMake(manuf):
-    if manuf == None:
-        return []
-    db_file = 'database.db'
-    Outputlist=[]
-    if createDatabase():
-        with sqlite3.connect(db_file) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM MSRP")
-            listmodel = cursor.fetchall()
-            for hearingaid in listmodel:
-                man,make,typ,price,date = hearingaid
-                if manuf == man:
-                    if make not in Outputlist:
-                        Outputlist.append(make)
-            return Outputlist
+def getMSRP(quan,typea,model):
+    if typea == None or quan == None or model == None:
+        return None
+    else:
+        quan = int(quan)
+        hearingaidlist = []
+        db_file = 'database.db'
+        if createDatabase():
+            with sqlite3.connect(db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM MSRP")
+                listmodel = cursor.fetchall()
+                for hearingaid in listmodel:
+                    man,make,typ,price,date = hearingaid
+                    if make == model:
+                        if typ == typea:
+                            hearingaidlist.append(hearingaid)
+                #Only 1 matching Hearing Aid
+                if len(hearingaidlist) == 1:
+                    man,make,typ,price,date = hearingaidlist[0]
+                    return price*quan
+                #Multiple Matching hearing aids, different dates
+                else:
+                    olman,olmake,oltyp,olprice,oldate = hearingaidlist[0]
+                    for newhearingaid in hearingaidlist:
+                        man,make,typ,price,date = newhearingaid
+                        if date > oldate:
+                            olman,olmake,oltyp,olprice,oldate = newhearingaid
+                    return olprice*quan
+                            
+
+
 
 
             #Gets current info, not sure why we would do this
@@ -593,63 +670,4 @@ def findMake(manuf):
 #             #print("yes")
 #             return {'display':'flex'}
 #     return {'display':'None'}
-
-#
-#
-#Notes
-#
-#
-#1. Should make an initalizer to make the database, Client and Payment tables
-#2. Should add functionality to update information
-#2.5 Should add filter functionality to allow multiple things to be searched
-#3. Buttons should be dyamic and only be accessed when information is avaliable
-#4. Add in a way to port prices and clients from excel
-#5. Add in multiple followup options and pills to display tags for each one
-#6. Add in closed client status
-#7. Add in cost part to calulate profit, must be done by time
-#8. Add in Client import feature
-#9. Add in how new hearing aid data can be added
-#10. Quantity and MSRP to hearing aid sales
-#11. Date to hearing aid datasheet
-#12. Add password to database
-#13. Password to sign in
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-""" app.callback(
-    Output({'type':'stock-input','index':'CAD'},'valid'),
-    Output({'type':'stock-input','index':'CAD'},'invalid'),
-    Input({'type':'stock-input','index':'CAD'},'value')
-)(checkvalid) """
-
-#Adds to stocks to Table
-
-""" @app.callback(
-    Output({'type':'datatable','index':MATCH},'data'),
-    Output({'type':'datatable','index':MATCH},'tooltip_data'),
-    Input({'type':'stock-confirm','index':MATCH},'n_clicks'),
-    Input({'type':'interval','index':MATCH},'n_intervals'),
-    State({'type':'datatable','index':MATCH},'data'),
-    State({'type':'datatable','index':MATCH},'tooltip_data'),
-    State({'type':'stock-input','index':MATCH},'value'),
-    State({'type':'amount-input','index':MATCH},'value'),
-    State({'type':'price-input','index':MATCH},'value'),
-    prevent_initial_call=True
-)
-
-def addToTable(clicks,intervals,data,tooltips,ticker,amount,price):
-    inputMethod = ctx.triggered_id
-     
-        return data,tooltips """
 

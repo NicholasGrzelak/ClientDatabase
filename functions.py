@@ -137,6 +137,40 @@ def readExcel(file):
     
     return df
         
+def findType(Model):
+    #Add for adding new client, edit for editing current one
+    if Model == None:
+        return []
+    db_file = 'database.db'
+    Outputlist=[]
+    if createDatabase():
+        with sqlite3.connect(db_file) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM MSRP")
+            listmodel = cursor.fetchall()
+            for hearingaid in listmodel:
+                man,make,typ,price,date = hearingaid
+                if Model == make:
+                    if typ not in Outputlist:
+                        Outputlist.append(typ)
+            return Outputlist
+        
+def findMake(manuf):
+    if manuf == None:
+        return []
+    db_file = 'database.db'
+    Outputlist=[]
+    if createDatabase():
+        with sqlite3.connect(db_file) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM MSRP")
+            listmodel = cursor.fetchall()
+            for hearingaid in listmodel:
+                man,make,typ,price,date = hearingaid
+                if manuf == man:
+                    if make not in Outputlist:
+                        Outputlist.append(make)
+            return Outputlist
 """ today = date(2023,7,10)
 compd = generateDate(today,'12 months')
 print('gendate: ', compd)
