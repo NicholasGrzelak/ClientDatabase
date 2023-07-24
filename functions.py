@@ -171,12 +171,24 @@ def findMake(manuf):
                     if make not in Outputlist:
                         Outputlist.append(make)
             return Outputlist
-""" today = date(2023,7,10)
-compd = generateDate(today,'12 months')
-print('gendate: ', compd)
-print('today: ', today)
-
-if compd <= today:
-    print('sucess')
-else:
-    print('no follow') """
+        
+def getClientNum(clicks):
+    #Make Database here
+    if createDatabase():
+        allclients = getAllClients()
+        #print('allclients: ',allclients)
+        if allclients == []:
+            return 100
+        else:
+            for row in allclients:
+                clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = row
+                #hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,
+            return clientnum+1
+    """ else:  
+        #creates database file using sql schema
+        schema_file = 'ClientSchema.sql'
+        with open(schema_file,'r') as rf:
+            schema = rf.read()
+        with sqlite3.connect(db_file) as conn:
+            conn.executescript(schema)
+        return 100 """

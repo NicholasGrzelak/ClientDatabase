@@ -227,7 +227,7 @@ def completeTask(completedtasks,task,checkbox):
         return None,completedtasks
     return None,completedtasks
 
-#Display Customer Info in section
+#Display Customer Info in Full View
 
 @app.callback(
     #Top Information
@@ -272,26 +272,27 @@ def displaydata(client):
     clientlist = client.split(" ")
     clientnum, firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = getClient(clientlist[0],clientlist[1])
     saleslist = getSalesByClient(clientnum)
+
+    #CHECKS IF THERE IS ANYTHING IN SALES LIST
     if saleslist == []:
         return clientnum,firstname,lastname,status,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,dateofvisit,followupdate,clientnotes,None,None,None,None,None,None,None,None,today,None,today,None,None
     else:
-        #print(saleslist)
+        #DECIDES WHICH SALE IS DIPLAYED
+        #Sets inital Values
         Invoice,clientnumber,Make,Model,Typea,Lserial,Rserial,dispensdate,Paid,Date,Amount,aidstatus,quan,msrp = saleslist[0]
-        #print(clientnum,firstname,lastname,status,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,clientnotes,Make,Model,Type,Lserial,Rserial,Paid,Invoice,Amount,Date,aidstatus,dispensdate,quan,msrp)
-        return clientnum,firstname,lastname,status,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,clientnotes,Make,Model,Typea,Lserial,Rserial,Paid,Invoice,Amount,Date,aidstatus,dispensdate,quan,msrp
+        for sale in saleslist:
+            #Gets values of each Sale
+            newInvoice,newclientnumber,newMake,newModel,newTypea,newLserial,newRserial,newdispensdate,newPaid,newDate,newAmount,newaidstatus,newquan,newmsrp = sale
+            #If a new Sale value = Trying then sets it to main values
+            if newaidstatus == "Trying":
+                Invoice,clientnumber,Make,Model,Typea,Lserial,Rserial,dispensdate,Paid,Date,Amount,aidstatus,quan,msrp = newInvoice,newclientnumber,newMake,newModel,newTypea,newLserial,newRserial,newdispensdate,newPaid,newDate,newAmount,newaidstatus,newquan,newmsrp 
+            else:
+                pass
+        #checks that if nothing was set to old values then replaces old sale with Nothing
+        if aidstatus == "Returned" or aidstatus == "Purchased":
+            Invoice,clientnumber,Make,Model,Typea,Lserial,Rserial,dispensdate,Paid,Date,Amount,aidstatus,quan,msrp = None,None,None,None,None,None,None,today,None,today,None,None,None,None
 
-    #print("clientlist", clientlist)
-    # db_file = 'database.db'
-    # with sqlite3.connect(db_file) as conn:
-    #     cursor = conn.cursor()
-    #     cursor.execute("""
-    #                select * from clients
-    #                """)
-    #     for row in cursor.fetchall():
-    #         clientnum, firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,hasHearingTestdate,Hearingtestdate,clientnotes = row
-    #         if firstname == clientlist[0]:
-    #             #print(firstname)
-    #             return clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,clientnotes
+        return clientnum,firstname,lastname,status,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,clientnotes,Make,Model,Typea,Lserial,Rserial,Paid,Invoice,Amount,Date,aidstatus,dispensdate,quan,msrp
 
 #Update Database for client in full view  
 @app.callback(
@@ -348,6 +349,7 @@ def updateDatabase(clicks,ID,first,last,status,emailad,phone,address,postal,cit,
             cursor.execute(" SELECT * FROM clients WHERE clientid = " + ID)
             clientnum, oldfirst,oldlast,oldemail,oldphone,oldaddress,oldpostal,oldcity,oldprovince,oldhealth,visitdate,followup,testbool,testdate,oldnotes,oldstatus = cursor.fetchall()[0]
             
+            print(appt)
             if "Hearing Test" in appt:
                 testbool=True
                 testdate=date.today()
@@ -358,8 +360,16 @@ def updateDatabase(clicks,ID,first,last,status,emailad,phone,address,postal,cit,
                 followup=date.today()
             if "Hearing Aid Purchase" in appt or "Hearing Aid Dispensing" in appt:
                 followup=date.today()
-                salesdata= [ID,manu,model,typea,lserial,rserial,dispensedate,paidbol,paydate,payamount,aidstatus,quan,msrp]
-                cursor.execute("UPDATE sales SET clientnumber= ?,manufacturer = ?,model = ?,type = ?,Lserialnum = ?,Rserialnum = ?,dispensedate = ?,invoicepaid = ?,paymentdate = ?,paymentamount = ?,status = ?,quantity = ?,msrp =? WHERE invoicenumber = " +invoicenum,salesdata)
+                
+                #Has to check if invoice is there
+                cursor.execute(" SELECT * FROM sales WHERE invoicenumber = " +invoicenum)
+                recieved = cursor.fetchall()
+                if recieved == []:
+                    salesdata= [(int(invoicenum),int(ID),manu,model,typea,lserial,rserial,dispensedate,paidbol,paydate,payamount,aidstatus,quan,msrp)]
+                    conn.executemany("insert into sales values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",salesdata)
+                else:
+                    salesdata= [ID,manu,model,typea,lserial,rserial,dispensedate,paidbol,paydate,payamount,aidstatus,quan,msrp]
+                    cursor.execute("UPDATE sales SET clientnumber= ?,manufacturer = ?,model = ?,type = ?,Lserialnum = ?,Rserialnum = ?,dispensedate = ?,invoicepaid = ?,paymentdate = ?,paymentamount = ?,status = ?,quantity = ?,msrp =? WHERE invoicenumber = " +invoicenum,salesdata)
 
 
             updatedata=[first,last,emailad,phone,address,postal,cit,prov,health,visitdate,followup,testbool,testdate,notes,status]
@@ -372,31 +382,14 @@ def updateDatabase(clicks,ID,first,last,status,emailad,phone,address,postal,cit,
 
     return True
 
+#FINDS CLIENT NUMBER AND POPULATES NEW CLIENT
+
 @app.callback(
     Output('ClientNumber',"value"),
     Input("ClientButton","n_clicks")
-)
+)(getClientNum)
 
-def getClientNum(clicks):
-    #Make Database here
-    if createDatabase():
-        allclients = getAllClients()
-        #print('allclients: ',allclients)
-        if allclients == []:
-            return 100
-        else:
-            for row in allclients:
-                clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = row
-                #hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate,
-            return clientnum+1
-    """ else:  
-        #creates database file using sql schema
-        schema_file = 'ClientSchema.sql'
-        with open(schema_file,'r') as rf:
-            schema = rf.read()
-        with sqlite3.connect(db_file) as conn:
-            conn.executescript(schema)
-        return 100 """
+#ADD CLIENT NUMBER TO HEARING AID
 
 @app.callback(
         Output('HearingAidClientIDNumber','value'),
@@ -456,7 +449,7 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
             #,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate
             date_object = datetime.strptime(followupdate, '%Y-%m-%d').date()
             testobject = datetime.strptime(Hearingtestdate, '%Y-%m-%d').date()
-            payobject = datetime.strptime(payDate, '%Y-%m-%d').date()
+            payobject = datetime.strptime(dispensedate, '%Y-%m-%d').date()
             
             routcomparedate = generateDate(date_object,routsetting)
             testcomparedate = generateDate(testobject,testsetting)
@@ -562,8 +555,41 @@ def uploadclients(contents):
     if contents is None:
         return False
     dataframe = readExcel(contents)
-    print('worked')
-    print(dataframe)
+
+    #Splits Dataframe
+    salesdata = dataframe.iloc[:,15:]
+    clientdata = dataframe.iloc[:,:15]
+
+    #Creates Client Dataframe
+    clientnumber = getClientNum(3)
+
+    clientnumberlist = []
+    clientnumberlist.append(clientnumber)
+    newnumber = clientnumber
+    for index in range(len(clientdata)-1):
+        newnumber = newnumber+1
+        clientnumberlist.append(newnumber)
+
+    clientdata.insert(0,'clientid',clientnumberlist,True)
+    clientdata['datevisit'] = clientdata['datevisit'].dt.strftime("%Y-%m-%d")
+    clientdata['datefollowup'] = clientdata['datefollowup'].dt.strftime("%Y-%m-%d")
+    clientdata['datetest'] = clientdata['datetest'].dt.strftime("%Y-%m-%d")
+
+    #Creates Sales Dataframe
+    salesdata.insert(1,'clientnumber',clientnumberlist,True)
+
+    #Drops non invoice sales data
+    salesdata.dropna(subset=['invoicenumber'],inplace=True)
+    salesdata = salesdata.astype({'invoicenumber':'int'})
+    salesdata.rename(columns={'status.1':'status'},inplace=True)
+    salesdata['dispensedate'] = salesdata['dispensedate'].dt.strftime("%Y-%m-%d")
+    salesdata['paymentdate'] = salesdata['paymentdate'].dt.strftime("%Y-%m-%d")
+
+    #Writes to Dataframe
+    cnx = sqlite3.connect('database.db')
+    salesdata.to_sql(name='sales',con=cnx,if_exists="append",index=False)
+    clientdata.to_sql(name='clients',con=cnx,if_exists="append",index=False)
+
     return True
 
 #UPLOAD PRICING INFORMATION TO THE DATABASE
@@ -646,8 +672,18 @@ def getMSRP(quan,typea,model):
                             olman,olmake,oltyp,olprice,oldate = newhearingaid
                     return olprice*quan
                             
+#ONLY TURNS ON UPDATE BUTTON ONCE APPOINTMENT HAS BEEN SELECTED
 
+@app.callback(
+    Output('changeClientInfo','disabled'),
+    Input('changeAppointmentType','value')
+)
 
+def dropActivate(value):
+    if value == None or value == []:
+        return True
+    else:
+        return False
 
 
             #Gets current info, not sure why we would do this
