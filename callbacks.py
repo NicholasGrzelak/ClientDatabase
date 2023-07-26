@@ -9,6 +9,7 @@ from datetime import date,datetime
 from functions import *
 import plotly.graph_objects as go
 import sqlite3
+import hashlib
 from dash.exceptions import PreventUpdate
 
 #Modal Toggles
@@ -50,22 +51,67 @@ app.callback(
     Input("HearingTestDropdown", "value")
 )(unhide)
 
-""" app.callback(
-    Output("HearingAidContainer", "style"),
-    Input("HearingAidDropdown", "value")
-)(unhide) """
+#Unhiding Client Full View Section
 
-""" app.callback(
-    Output("PurchaseDateContainer", "style"),
-    Input("ClientPurchaseDropdown", "value")
-)(unhide) """
+@app.callback(
+    Output("ClientContainer",'style'),
+    Input("ClientSelectDropdown",'value')
+)
+def unhideUpdateClient(value):
+    if value == None:
+        return {'display':'None'}
+    else:
+        return {'display':'block'}
 
-# TEMPORARILY DISABLED
-#change so that state of previous div changeHearingAidPurchaseDiv effects current
-# app.callback(
-#     Output("changePaymentDiv", "style"),
-#     Input("changePaid", "value")
-# )(unhide)
+#Displays payment Section in Full View
+
+app.callback(
+    Output('changePaymentDiv', "style"),
+    Input('changePaid', "value")
+)(unhide)
+
+#Displays Hearing Aid Section in Full View
+
+@app.callback(
+    Output("changeHearingAidPurchaseDiv", "style"),
+    Input("changeAppointmentType", "value")
+)
+def DisplayHearingAidFullView(value):
+    if value == [] or value == None:
+        return {'display':'None'}
+    if "Hearing Aid Dispensing" in value or "Hearing Aid Purchase" in value:
+        return {'display':'block'}
+    else:
+        return {'display':'None'}
+
+#Login Callback
+@app.callback(
+    Output("loginModal", "is_open"),
+    Output("loginToast", "is_open"),
+    Input("signInButton", "n_clicks"),
+    State('usernameEnter','value'),
+    State('passwordEnter','value'),
+)
+def Login(clicks,username,password):
+    if clicks > 0:
+        if username == None or password == None:
+            return True,True
+        username = hashlib.sha256(username.encode()).hexdigest()
+        password = hashlib.sha256(password.encode()).hexdigest()
+
+        conn = sqlite3.connect('userdata.db')
+        cur = conn.cursor()
+
+        cur.execute("SELECT * FROM userdata WHERE username=? AND password = ?",(username,password))
+
+        if cur.fetchall():
+            print('Login Successful')
+            return False,False
+        else:
+            return True,True
+    else:
+        return True,False
+
 
 #Button should be desiabled until items are filled
 
@@ -275,7 +321,7 @@ def displaydata(client):
 
     #CHECKS IF THERE IS ANYTHING IN SALES LIST
     if saleslist == []:
-        return clientnum,firstname,lastname,status,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,dateofvisit,followupdate,clientnotes,None,None,None,None,None,None,None,None,today,None,today,None,None
+        return clientnum,firstname,lastname,status,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,clientnotes,None,None,None,None,None,None,None,None,today,None,today,None,None
     else:
         #DECIDES WHICH SALE IS DIPLAYED
         #Sets inital Values

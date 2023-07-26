@@ -470,6 +470,41 @@ taskListModal = dbc.Modal([
     dbc.ModalFooter(),
 ],id='taskListModal',is_open=False,size="xl")
 
+loginModal = dbc.Modal([
+    dbc.ModalHeader(dbc.ModalTitle("Login"),close_button=False),
+    dbc.ModalBody([
+        dbc.Row([
+            dbc.Col([
+                dbc.Label('Username:')
+            ],style={'textAlign':'center'},width=3,align='center'),
+            dbc.Col([
+                dbc.Input(id='usernameEnter')
+            ],width=9),
+        ],style={'margin-bottom':'10px'}),
+        dbc.Row([  
+            dbc.Col([
+                dbc.Label('Password:')
+            ],style={'textAlign':'center'},width=3,align='center'),
+            dbc.Col([
+                dbc.Input(id='passwordEnter')
+            ],width=9),
+        ],style={'margin-bottom':'10px'}),
+        dbc.Row([
+            dbc.Col([
+                dbc.Button('Sign In',id='signInButton',n_clicks=0),
+                dbc.Toast(
+                    id='loginToast',
+                    header='Login Failed',
+                    duration=4000,
+                    icon='danger',
+                    is_open=False
+                )
+            ])
+        ],style={'textAlign':'center'})
+    ]),
+    dbc.ModalFooter(),
+],id='loginModal',is_open=True,backdrop='static')
+
 #Task List Modal
 #Should have check boxes for tasks that go into the top of bottom container once checkchecked. Then in bottom container tasks can be deleted.
 #Maybe store in another database, see if a good way to make new task without clicking a add button, try to add at the bottom of current task list
@@ -484,10 +519,11 @@ taskListModal = dbc.Modal([
 
 navitems = dbc.Row([
     dbc.Col([
-        dbc.Button(['Sales'],id="salesButton",class_name="bg-transparent border-0 text-primary")
+        dbc.Button(['Sales'],id="salesButton",class_name="bg-transparent border-0")
     ]),
+    #text-secondary
     dbc.Col([
-        dbc.Button(['Settings'],id="settingsButton",n_clicks=0,class_name="bg-transparent border-0 text-primary")
+        dbc.Button(['Settings'],id="settingsButton",n_clicks=0,class_name="bg-transparent border-0")
     ]),
 ],class_name="ms-auto flex-nowrap mt-3 mt-md-0",align="center")
 
@@ -499,7 +535,7 @@ layout = dbc.Container([
     dbc.Navbar([
         dbc.Container([
             dbc.Row([
-                dbc.NavbarBrand('CRM Platform',class_name='ms-2')
+                dbc.NavbarBrand('Hearing Management',class_name='ms-2')
             ],
             align="center",
             class_name="g-0"
@@ -507,10 +543,10 @@ layout = dbc.Container([
             dbc.NavbarToggler(id="navbar-toggler",n_clicks=0),
             dbc.Collapse(navitems,id="navbar-collapse",is_open="false",navbar=True)
         ],fluid=True),
-    ],style={'margin-bottom':'10px'},expand=True),
+    ],style={'margin-bottom':'35px'},expand=True,dark=True,color='primary'),
     dbc.Row([
         dbc.Col([dbc.Button(["Add New Client"],id="ClientButton",n_clicks=0)],style={'textAlign':'center'}),
-        dbc.Col([dbc.Button(["Task List"],id="taskListButton")],style={'textAlign':'center'}),
+        dbc.Col([dbc.Button(["Task List (WIP)"],id="taskListButton")],style={'textAlign':'center'}),
         dbc.Col([
             dbc.Button(
                 [
@@ -519,9 +555,9 @@ layout = dbc.Container([
                 id="followUpButton")]
             ,style={'textAlign':'center'}),
     ],justify="end",class_name='g-0'),
-    dbc.Row([ClientModal,FollowupModal,settingsModal,taskListModal,hearingaidmodal],style={'margin-bottom':'20px'},),
+    dbc.Row([ClientModal,FollowupModal,settingsModal,taskListModal,hearingaidmodal,loginModal],style={'margin-bottom':'20px'},),
     dbc.Row([
-        dbc.Col([dbc.Button(["Filters"],id="ClientSelectFilter")],md={"size":3,'offset':1},style={'textAlign':'right'}),
+        dbc.Col([dbc.Button(["Filters (WIP)"],id="ClientSelectFilter")],md={"size":3,'offset':1},style={'textAlign':'right'}),
         dbc.Col([dcc.Dropdown(id="ClientSelectDropdown",options=['A',"B"])],md={"size":4}),
     ],style={'margin-bottom':'20px'}),
     #Add in container Purchased Hearing Aid Button
@@ -553,203 +589,203 @@ layout = dbc.Container([
                 ],class_name='mb-3') 
             ],width=2),
         ]),
-    dbc.Row([
-        dbc.Col([
+        dbc.Row([
+            dbc.Col([
+                    dbc.InputGroup([
+                        dbc.InputGroupText("Email"),
+                        dbc.Input(id='changeEmail')
+                    ],class_name='mb-3')
+                ]),
+            dbc.Col([
+                    dbc.InputGroup([
+                        dbc.InputGroupText("Phone Number"),
+                        dbc.Input(id='changePhoneNumber')
+                    ],class_name='mb-3')
+                ]),
+        ]),
+        dbc.Row([
+            dbc.Col([
+                    dbc.InputGroup([
+                        dbc.InputGroupText("Address"),
+                        dbc.Input(id='changeAddress')
+                    ],class_name='mb-3')
+            ],width=4),
+            dbc.Col([
+                    dbc.InputGroup([
+                        dbc.InputGroupText("Postal Code"),
+                        dbc.Input(id='changePostalCode')
+                    ],class_name='mb-3')
+            ],width=3),
+            dbc.Col([
+                    dbc.InputGroup([
+                        dbc.InputGroupText("City"),
+                        dbc.Input(id='changeCity')
+                    ],class_name='mb-3')
+            ],width=3),
+            dbc.Col([
+                    dbc.InputGroup([
+                        dbc.InputGroupText("Province"),
+                        dbc.Input(id='changeProvince')
+                    ],class_name='mb-3')
+            ],width=2),
+        ]),
+        dbc.Row([
+            dbc.Col([
                 dbc.InputGroup([
-                    dbc.InputGroupText("Email"),
-                    dbc.Input(id='changeEmail')
+                    dbc.InputGroupText("Health Card"),
+                    dbc.Input(id='changeHealthCard')
+                ],class_name='mb-3')
+            ],width=5),
+            dbc.Col([
+                dbc.InputGroup([
+                    dbc.InputGroupText("Visit:"),
+                    dcc.DatePickerSingle(
+                        id='changeVisitDate',
+                        initial_visible_month=date.today(),
+                        date=date.today(),
+                        disabled=True,
+                        clearable=True,
+                    ),
                 ],class_name='mb-3')
             ]),
-        dbc.Col([
+            dbc.Col([
                 dbc.InputGroup([
-                    dbc.InputGroupText("Phone Number"),
-                    dbc.Input(id='changePhoneNumber')
+                    dbc.InputGroupText("Followed Up:"),
+                    dcc.DatePickerSingle(
+                        id='changeFollowDate',
+                        initial_visible_month=date.today(),
+                        date=date.today(),
+                        disabled=True,
+                        clearable=True,
+                    ),
                 ],class_name='mb-3')
             ]),
-    ]),
-    dbc.Row([
-        dbc.Col([
-                dbc.InputGroup([
-                    dbc.InputGroupText("Address"),
-                    dbc.Input(id='changeAddress')
-                ],class_name='mb-3')
-        ],width=4),
-        dbc.Col([
-                dbc.InputGroup([
-                    dbc.InputGroupText("Postal Code"),
-                    dbc.Input(id='changePostalCode')
-                ],class_name='mb-3')
-        ],width=3),
-        dbc.Col([
-                dbc.InputGroup([
-                    dbc.InputGroupText("City"),
-                    dbc.Input(id='changeCity')
-                ],class_name='mb-3')
-        ],width=3),
-        dbc.Col([
-                dbc.InputGroup([
-                    dbc.InputGroupText("Province"),
-                    dbc.Input(id='changeProvince')
-                ],class_name='mb-3')
-        ],width=2),
-    ]),
-    dbc.Row([
-        dbc.Col([
+        ]),
+        dbc.Row([
             dbc.InputGroup([
-                dbc.InputGroupText("Health Card"),
-                dbc.Input(id='changeHealthCard')
-            ],class_name='mb-3')
-        ],width=5),
-        dbc.Col([
-            dbc.InputGroup([
-                dbc.InputGroupText("Visit:"),
-                dcc.DatePickerSingle(
-                    id='changeVisitDate',
-                    initial_visible_month=date.today(),
-                    date=date.today(),
-                    disabled=True,
-                    clearable=True,
-                ),
+                dbc.InputGroupText("Notes"),
+                dbc.Textarea(id='changeNotes')
             ],class_name='mb-3')
         ]),
-        dbc.Col([
-            dbc.InputGroup([
-                dbc.InputGroupText("Followed Up:"),
-                dcc.DatePickerSingle(
-                    id='changeFollowDate',
-                    initial_visible_month=date.today(),
-                    date=date.today(),
-                    disabled=True,
-                    clearable=True,
-                ),
-            ],class_name='mb-3')
-        ]),
-    ]),
-    dbc.Row([
-        dbc.InputGroup([
-            dbc.InputGroupText("Notes"),
-            dbc.Textarea(id='changeNotes')
-        ],class_name='mb-3')
-    ]),
-    dbc.Row([
-        dbc.Container([
-            html.Div([
-                dbc.Row([
-                    dbc.Col([
-                        dbc.InputGroup([
-                            dbc.InputGroupText("Invoice #"),
-                            dbc.Input(id='changeInvoiceNumber')
+        dbc.Row([
+            dbc.Container([
+                html.Div([
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Invoice #"),
+                                dbc.Input(id='changeInvoiceNumber')
+                            ],class_name='mb-3')
+                        ]),
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Hearing Aid Status"),
+                                dcc.Dropdown(options=["Trying","Returned","Purchased"],id='changeAidStatus',style={'flex':'1 1 auto','align-self':'center'})
+                            ],class_name='mb-3')
+                        ]),
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Dispensed Date:"),
+                                dcc.DatePickerSingle(
+                                    id='changeDispenseDate',
+                                    initial_visible_month=date.today(),
+                                    date=date.today(),
+                                    disabled=False,
+                                    clearable=True,
+                                ),
+                            ])
                         ],class_name='mb-3')
                     ]),
-                    dbc.Col([
-                        dbc.InputGroup([
-                            dbc.InputGroupText("Hearing Aid Status"),
-                            dcc.Dropdown(options=["Trying","Returned","Purchased"],id='changeAidStatus',style={'flex':'1 1 auto','align-self':'center'})
-                        ],class_name='mb-3')
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Quantity"),
+                                dcc.Dropdown(options=["1","2"],id='changeQuan',style={'flex':'1 1 auto','align-self':'center'})
+                            ],class_name='mb-3')
+                        ],width=3),
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Manufacturer"),
+                                dcc.Dropdown(id='changeHearingAidMake',options=['Bernafon','Other'],style={'flex':'1 1 auto','align-self':'center'})
+                            ],class_name='mb-3')
+                        ],width=3),
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Model"),
+                                dcc.Dropdown(id='changeHearingAidModel',style={'flex':'1 1 auto','align-self':'center'})
+                            ],class_name='mb-3')
+                        ],width=3),
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Type"),
+                                dcc.Dropdown(id='changeHearingAidType',style={'flex':'1 1 auto','align-self':'center'})
+                            ],class_name='mb-3')
+                        ],width=3),
                     ]),
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Left Serial Number"),
+                                dbc.Input(id='changeHearingAidLSerial')
+                            ],class_name='mb-3')
+                        ],width={'size':4}),
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Right Serial Number"),
+                                dbc.Input(id='changeHearingAidRSerial')
+                            ],class_name='mb-3')
+                        ],width={'size':4}),
+                        dbc.Col([
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Paid"),
+                                dcc.Dropdown(options=["Yes","No"],id='changePaid',style={'flex':'1 1 auto','align-self':'center'})
+                            ],class_name='mb-3')
+                        ],width=4)
+                    ]),
+                ],id="changeHearingAidPurchaseDiv"),
+                dbc.Row([                
                     dbc.Col([
                         dbc.InputGroup([
-                            dbc.InputGroupText("Dispensed Date:"),
+                            dbc.InputGroupText("Payment Date"),
                             dcc.DatePickerSingle(
-                                id='changeDispenseDate',
+                                id='changePaymentDate',
                                 initial_visible_month=date.today(),
                                 date=date.today(),
-                                disabled=False,
                                 clearable=True,
                             ),
-                        ])
-                    ],class_name='mb-3')
-                ]),
-                dbc.Row([
+                        ],class_name='mb-3')
+                    ]),
                     dbc.Col([
                         dbc.InputGroup([
-                            dbc.InputGroupText("Quantity"),
-                            dcc.Dropdown(options=["1","2"],id='changeQuan',style={'flex':'1 1 auto','align-self':'center'})
+                            dbc.InputGroupText("Invoice $"),
+                            dbc.Input(id='changeInvoiceAmount')
                         ],class_name='mb-3')
-                    ],width=3),
+                    ]),
                     dbc.Col([
                         dbc.InputGroup([
-                            dbc.InputGroupText("Manufacturer"),
-                            dcc.Dropdown(id='changeHearingAidMake',options=['Bernafon','Other'],style={'flex':'1 1 auto','align-self':'center'})
+                            dbc.InputGroupText("MSRP"),
+                            dbc.Input(id='changeMSRP')
                         ],class_name='mb-3')
-                    ],width=3),
-                    dbc.Col([
-                        dbc.InputGroup([
-                            dbc.InputGroupText("Model"),
-                            dcc.Dropdown(id='changeHearingAidModel',style={'flex':'1 1 auto','align-self':'center'})
-                        ],class_name='mb-3')
-                    ],width=3),
-                    dbc.Col([
-                        dbc.InputGroup([
-                            dbc.InputGroupText("Type"),
-                            dcc.Dropdown(id='changeHearingAidType',style={'flex':'1 1 auto','align-self':'center'})
-                        ],class_name='mb-3')
-                    ],width=3),
-                ]),
-                dbc.Row([
-                    dbc.Col([
-                        dbc.InputGroup([
-                            dbc.InputGroupText("Left Serial Number"),
-                            dbc.Input(id='changeHearingAidLSerial')
-                        ],class_name='mb-3')
-                    ],width={'size':4}),
-                    dbc.Col([
-                        dbc.InputGroup([
-                            dbc.InputGroupText("Right Serial Number"),
-                            dbc.Input(id='changeHearingAidRSerial')
-                        ],class_name='mb-3')
-                    ],width={'size':4}),
-                    dbc.Col([
-                        dbc.InputGroup([
-                            dbc.InputGroupText("Paid"),
-                            dcc.Dropdown(options=["Yes","No"],id='changePaid',style={'flex':'1 1 auto','align-self':'center'})
-                        ],class_name='mb-3')
-                    ],width=4)
-                ]),
-            ],id="changeHearingAidPurchaseDiv"),
-            dbc.Row([                
-                dbc.Col([
-                    dbc.InputGroup([
-                        dbc.InputGroupText("Payment Date"),
-                        dcc.DatePickerSingle(
-                            id='changePaymentDate',
-                            initial_visible_month=date.today(),
-                            date=date.today(),
-                            clearable=True,
-                        ),
-                    ],class_name='mb-3')
-                ]),
-                dbc.Col([
-                    dbc.InputGroup([
-                        dbc.InputGroupText("Invoice $"),
-                        dbc.Input(id='changeInvoiceAmount')
-                    ],class_name='mb-3')
-                ]),
-                dbc.Col([
-                    dbc.InputGroup([
-                        dbc.InputGroupText("MSRP"),
-                        dbc.Input(id='changeMSRP')
-                    ],class_name='mb-3')
-                ])
-            ],id='changePaymentDiv')
-        ])
-    ]),
-    dbc.Row([
-        dbc.Col([
-            dcc.Dropdown(options=["Hearing Test","Hearing Aid Dispensing","Hearing Aid Purchase","Ear Cleaning"],id="changeAppointmentType",multi=True)
+                    ])
+                ],id='changePaymentDiv')
+            ])
         ]),
-        dbc.Col([
-            dbc.Button("Update",id='changeClientInfo',n_clicks=0),
-            dbc.Toast(
-                children=[],
-                id="ClientUpdateToast",
-                header="Client Updated",
-                icon="primary",
-                duration=4000,
-                is_open=False
-            )
-        ]) #only activates if something has been updated
-    ])
+        dbc.Row([
+            dbc.Col([
+                dcc.Dropdown(options=["Hearing Test","Hearing Aid Dispensing","Hearing Aid Purchase","Ear Cleaning"],id="changeAppointmentType",multi=True)
+            ]),
+            dbc.Col([
+                dbc.Button("Update",id='changeClientInfo',n_clicks=0),
+                dbc.Toast(
+                    children=[],
+                    id="ClientUpdateToast",
+                    header="Client Updated",
+                    icon="primary",
+                    duration=4000,
+                    is_open=False
+                )
+            ]) #only activates if something has been updated
+        ],style={'margin-bottom':'10px'})
     ],id="ClientContainer",class_name="border rounded-pill")
 ],fluid=True,style={'padding':'0'})
 
