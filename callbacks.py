@@ -88,30 +88,37 @@ def DisplayHearingAidFullView(value):
 @app.callback(
     Output("loginModal", "is_open"),
     Output("loginToast", "is_open"),
+    Output("memory-output","data"),
     Input("signInButton", "n_clicks"),
     State('usernameEnter','value'),
     State('passwordEnter','value'),
 )
 def Login(clicks,username,password):
-    if clicks > 0:
-        if username == None or password == None:
-            return True,True
-        username = hashlib.sha256(username.encode()).hexdigest()
-        password = hashlib.sha256(password.encode()).hexdigest()
+    if username == None or password == None:
+        return True,False,None
+        
+    conn = sqlite3.connect('userdata.db')
+    cur = conn.cursor()
 
-        conn = sqlite3.connect('userdata.db')
-        cur = conn.cursor()
+    cur.execute("SELECT * FROM userdata WHERE username=? AND password = ?",(hashInput(username),hashInput(password)))
 
-        cur.execute("SELECT * FROM userdata WHERE username=? AND password = ?",(username,password))
+    line = cur.fetchall()
 
-        if cur.fetchall():
-            print('Login Successful')
-            return False,False
-        else:
-            return True,True
+    #State('passwordEnter','value'),
+    #State("memory-output","data"),
+
+    if line:
+        #print(line)
+        id, us, pw, databasefile, keyfile = line[0]
+        
+        databasefile = decrypt('Data/configs/main.pkl',hashInput('UekiJW^209*$3D4'),databasefile)
+        keyfile = decrypt('Data/configs/main.pkl',hashInput('UekiJW^209*$3D4'),keyfile)
+
+        #print(databasefile,keyfile)
+        print('Login Successful')
+        return False,False,[databasefile,keyfile]
     else:
-        return True,False
-
+        return True,True,None
 
 #Button should be desiabled until items are filled
 
@@ -182,25 +189,41 @@ def Login(clicks,username,password):
     State('ClientHearingAidStatus',"value"),
     State("ClientHearingAidDispenseDate","date"),
     State('ClientHearingAidMSRP',"value"),
+    #SECURITY FEATURES
+    State('passwordEnter','value'),
+    State("memory-output","data"),
     #Button Press Input
     Input("ClientConfirm", "n_clicks")
 )
-def ConfirmClient(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,hearingAidInvoice,hearingAidManufacture,hearingAidModel,hearingAidType,LSerial,RSerial,hearinghaspaid,Prosoundpurchasedate,hearingpaidamount,quan,aidstatus,dispensedate,msrp,clicks):
+def ConfirmClient(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,hearingAidInvoice,hearingAidManufacture,hearingAidModel,hearingAidType,LSerial,RSerial,hearinghaspaid,Prosoundpurchasedate,hearingpaidamount,quan,aidstatus,dispensedate,msrp,password,memory,clicks):
     #Filters out pay information
     today = date.today()
     if firstname == None and lastname == None:
         return False,None,None,None,None,None,None,None,None,None,today,today,None,today,None,None,None,None,None,None,None,None,today,None,None,None,today,None
     
+    #print(memory)
+
     #information should be cleaned here
     #if hearing aid = No then model = None and date = None
 
-    #makes list of all data
-    clientlist = [(clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,'Open')]    
-    hearingaidlist= [(hearingAidInvoice,clientnum,hearingAidManufacture,hearingAidModel,hearingAidType,LSerial,RSerial,dispensedate,hearinghaspaid,Prosoundpurchasedate,hearingpaidamount,aidstatus,quan,msrp)]
-    
-    db_file = 'database.db'
+    db_file = memory[1]
+    keyfile = memory[0]
 
-    if createDatabase():
+    #makes list of all data and encrypts
+    clientlist = [(clientnum,firstname,lastname,encrypt(keyfile,password,email),encrypt(keyfile,password,phone),encrypt(keyfile,password,address),encrypt(keyfile,password,postal),encrypt(keyfile,password,city),encrypt(keyfile,password,province),encrypt(keyfile,password,healthcard),encrypt(keyfile,password,dateofvisit),encrypt(keyfile,password,followupdate),encrypt(keyfile,password,hasHearingTestdate),encrypt(keyfile,password,Hearingtestdate),encrypt(keyfile,password,clientnotes),encrypt(keyfile,password,'Open'))]    
+    if hearingAidInvoice != None:
+        hearingaidlist= [(hearingAidInvoice,clientnum,encrypt(keyfile,password,hearingAidManufacture),encrypt(keyfile,password,hearingAidModel),encrypt(keyfile,password,hearingAidType),encrypt(keyfile,password,LSerial),encrypt(keyfile,password,RSerial),encrypt(keyfile,password,dispensedate),encrypt(keyfile,password,hearinghaspaid),encrypt(keyfile,password,Prosoundpurchasedate),encrypt(keyfile,password,hearingpaidamount),encrypt(keyfile,password,aidstatus),encrypt(keyfile,password,quan),encrypt(keyfile,password,msrp))]
+    else:
+        hearingaidlist = [()]
+    #Encrypts Data
+
+    
+
+    #clientlist = encryptTuple(keyfile,hashInput(password),clientlist)
+    #hearingaidlist = encryptTuple(keyfile,hashInput(password),hearingaidlist)
+    
+
+    if createDatabase(db_file):
         with sqlite3.connect(db_file) as conn:
             conn.executemany("insert into clients values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",clientlist)
             if hearingAidInvoice != None:
@@ -229,14 +252,20 @@ def ConfirmClient(clientnum,firstname,lastname,email,phone,address,postal,city,p
 #Populates Dropdown with all client Information
 @app.callback(
     Output("ClientSelectDropdown", "options"),
-    Input("ClientSelectDropdown", "search_value")
+    Input("ClientSelectDropdown", "search_value"),
+    State("memory-output","data")
     )
-def GetClients(value):
+
+def GetClients(value,memory):
     #print(value)
+
     if value == None:
         return []
+    
+    dbfile = memory[1]
+
     matchinglist=[]
-    allclients = getAllClients()
+    allclients = getAllClients(dbfile)
     for row in allclients:
         clientnum,firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = row
         if firstname == None:
@@ -307,17 +336,42 @@ def completeTask(completedtasks,task,checkbox):
     Output('changeQuan',"value"),
     Output('changeMSRP',"value",allow_duplicate=True),
     Input("ClientSelectDropdown","value"),
+    #SECURITY FEATURES
+    State('passwordEnter','value'),
+    State("memory-output","data"),
     prevent_initial_call=True
 )
 
-def displaydata(client):
+def displaydata(client,password,memory):
     """Gets and displays a clients data"""
     today = date.today()
     if client == None:
         return None,None,None,None,None,None,None,None,None,None,None,today,today,None,None,None,None,None,None,None,None,None,today,None,today,None,None
     clientlist = client.split(" ")
-    clientnum, firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = getClient(clientlist[0],clientlist[1])
-    saleslist = getSalesByClient(clientnum)
+
+    keyfile = memory[0]
+    db = memory[1]
+
+    clientnum, firstname,lastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = getClient(clientlist[0],clientlist[1],db,keyfile,password)
+    saleslist = getSalesByClient(clientnum,db)
+
+    #Decrypting Customer Data
+    email = decrypt(keyfile,password,email)
+    phone = decrypt(keyfile,password,phone)
+    address = decrypt(keyfile,password,address)
+    postal = decrypt(keyfile,password,postal)
+    city = decrypt(keyfile,password,city)
+    province = decrypt(keyfile,password,province)
+    healthcard = decrypt(keyfile,password,healthcard)
+    dateofvisit = decrypt(keyfile,password,dateofvisit)
+    followupdate = decrypt(keyfile,password,followupdate)
+    clientnotes = decrypt(keyfile,password,clientnotes)
+    status = decrypt(keyfile,password,status)
+
+    """ email = decrypt(keyfile,password,email)
+    email = decrypt(keyfile,password,email)
+    email = decrypt(keyfile,password,email)
+    """
 
     #CHECKS IF THERE IS ANYTHING IN SALES LIST
     if saleslist == []:
@@ -329,6 +383,7 @@ def displaydata(client):
         for sale in saleslist:
             #Gets values of each Sale
             newInvoice,newclientnumber,newMake,newModel,newTypea,newLserial,newRserial,newdispensdate,newPaid,newDate,newAmount,newaidstatus,newquan,newmsrp = sale
+            newaidstatus = decrypt(keyfile,password,newaidstatus)
             #If a new Sale value = Trying then sets it to main values
             if newaidstatus == "Trying":
                 Invoice,clientnumber,Make,Model,Typea,Lserial,Rserial,dispensdate,Paid,Date,Amount,aidstatus,quan,msrp = newInvoice,newclientnumber,newMake,newModel,newTypea,newLserial,newRserial,newdispensdate,newPaid,newDate,newAmount,newaidstatus,newquan,newmsrp 
@@ -337,6 +392,22 @@ def displaydata(client):
         #checks that if nothing was set to old values then replaces old sale with Nothing
         if aidstatus == "Returned" or aidstatus == "Purchased":
             Invoice,clientnumber,Make,Model,Typea,Lserial,Rserial,dispensdate,Paid,Date,Amount,aidstatus,quan,msrp = None,None,None,None,None,None,None,today,None,today,None,None,None,None
+        else:
+            Make = decrypt(keyfile,password,Make)
+            Model = decrypt(keyfile,password,Model)
+            Typea = decrypt(keyfile,password,Typea)
+            Lserial = decrypt(keyfile,password,Lserial)
+            Rserial = decrypt(keyfile,password,Rserial)
+            Paid = decrypt(keyfile,password,Paid)
+            dispensdate = decrypt(keyfile,password,dispensdate)
+            Date = decrypt(keyfile,password,Date)
+            Amount = decrypt(keyfile,password,Amount)
+            #aidstatus = decrypt(keyfile,password,aidstatus)
+            #`b'gAAAAABkzAlC-XXvWkk0exuorxN6CS_0hUaPOWYV_AyQDArHqNOPUmU1obEeGE5QTAXr5L_MLvER9bRTyzzoGvVHIxzqp6u0_w=='`
+
+
+            quan = decrypt(keyfile,password,quan)
+            msrp = decrypt(keyfile,password,msrp)
 
         return clientnum,firstname,lastname,status,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,clientnotes,Make,Model,Typea,Lserial,Rserial,Paid,Invoice,Amount,Date,aidstatus,dispensdate,quan,msrp
 
@@ -370,18 +441,23 @@ def displaydata(client):
     State('changePaymentDate','date'),
     State('changeInvoiceAmount','value'),
     State('changeMSRP','value'),
-    State("changeAppointmentType",'value')
+    State("changeAppointmentType",'value'),
+    #SECURITY FEATURES
+    State('passwordEnter','value'),
+    State("memory-output","data")
 )
 
-def updateDatabase(clicks,ID,first,last,status,emailad,phone,address,postal,cit,prov,health,notes,invoicenum,aidstatus,dispensedate,quan,manu,model,typea,lserial,rserial,paidbol,paydate,payamount,msrp,appt):
+def updateDatabase(clicks,ID,first,last,status,emailad,phone,address,postal,cit,prov,health,notes,invoicenum,aidstatus,dispensedate,quan,manu,model,typea,lserial,rserial,paidbol,paydate,payamount,msrp,appt,password,memory):
     if ID == None:
         return False
     else:
         ID = str(ID)
     if invoicenum != None:
         invoicenum = str(invoicenum)
-    db_file = 'database.db'
-    if createDatabase():
+
+    db_file = memory[1]
+    keyfile = memory[0]
+    if createDatabase(db_file):
         
         
         testlist=["Hearing Test","Hearing Aid Dispensing","Hearing Aid Purchase","Ear Cleaning"]
@@ -411,14 +487,14 @@ def updateDatabase(clicks,ID,first,last,status,emailad,phone,address,postal,cit,
                 cursor.execute(" SELECT * FROM sales WHERE invoicenumber = " +invoicenum)
                 recieved = cursor.fetchall()
                 if recieved == []:
-                    salesdata= [(int(invoicenum),int(ID),manu,model,typea,lserial,rserial,dispensedate,paidbol,paydate,payamount,aidstatus,quan,msrp)]
+                    salesdata= [(int(invoicenum),int(ID),encrypt(keyfile,password,manu),encrypt(keyfile,password,model),encrypt(keyfile,password,typea),encrypt(keyfile,password,lserial),encrypt(keyfile,password,rserial),encrypt(keyfile,password,dispensedate),encrypt(keyfile,password,paidbol),encrypt(keyfile,password,paydate),encrypt(keyfile,password,payamount),encrypt(keyfile,password,aidstatus),encrypt(keyfile,password,quan),encrypt(keyfile,password,msrp))]
                     conn.executemany("insert into sales values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",salesdata)
                 else:
-                    salesdata= [ID,manu,model,typea,lserial,rserial,dispensedate,paidbol,paydate,payamount,aidstatus,quan,msrp]
+                    salesdata= [ID,encrypt(keyfile,password,manu),encrypt(keyfile,password,model),encrypt(keyfile,password,typea),encrypt(keyfile,password,lserial),encrypt(keyfile,password,rserial),encrypt(keyfile,password,dispensedate),encrypt(keyfile,password,paidbol),encrypt(keyfile,password,paydate),encrypt(keyfile,password,payamount),encrypt(keyfile,password,aidstatus),encrypt(keyfile,password,quan),encrypt(keyfile,password,msrp)]
                     cursor.execute("UPDATE sales SET clientnumber= ?,manufacturer = ?,model = ?,type = ?,Lserialnum = ?,Rserialnum = ?,dispensedate = ?,invoicepaid = ?,paymentdate = ?,paymentamount = ?,status = ?,quantity = ?,msrp =? WHERE invoicenumber = " +invoicenum,salesdata)
 
 
-            updatedata=[first,last,emailad,phone,address,postal,cit,prov,health,visitdate,followup,testbool,testdate,notes,status]
+            updatedata=[first,last,encrypt(keyfile,password,emailad),encrypt(keyfile,password,phone),encrypt(keyfile,password,address),encrypt(keyfile,password,postal),encrypt(keyfile,password,cit),encrypt(keyfile,password,prov),encrypt(keyfile,password,health),encrypt(keyfile,password,visitdate),encrypt(keyfile,password,followup),encrypt(keyfile,password,testbool),encrypt(keyfile,password,testdate),encrypt(keyfile,password,notes),encrypt(keyfile,password,status)]
             cursor.execute("UPDATE clients SET firstname = ? ,lastname = ?,email = ?,phonenumber = ?,homeaddress = ?,postalcode = ?,city = ?,province = ?,healthcard = ?,datevisit = ?,datefollowup = ?,hearingtest = ?,datetest = ?,notes =?,status=? WHERE clientid = " +ID,updatedata)
 
             #updatedata = (first,last,emailad,phone,address,postal,cit,prov,health,notes,status)
@@ -432,8 +508,14 @@ def updateDatabase(clicks,ID,first,last,status,emailad,phone,address,postal,cit,
 
 @app.callback(
     Output('ClientNumber',"value"),
-    Input("ClientButton","n_clicks")
-)(getClientNum)
+    Input("ClientButton","n_clicks"),
+    Input("memory-output","data")
+)
+def clientNumberMask(clicks,memory):
+    if memory == None:
+        return None
+    #print(memory)
+    return getClientNum(clicks,memory[1])
 
 #ADD CLIENT NUMBER TO HEARING AID
 
@@ -453,10 +535,11 @@ def updateClientNumberHearingAid(num):
     Input('FollowUpSettingsPayment','value'),
     Input('FollowUpSettingsHearing','value'),
     Input('FollowUpSettingsTest','value'),
-    
+    State("memory-output","data"),
+    State('passwordEnter','value')
 )
 
-def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
+def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting,memory,password):
     #Makes a date to compare to, if ccompare date = actual follow up
     #or if compare date is smaller than actual follow up
     #print(setting)
@@ -467,18 +550,26 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
     hearingaidfollowup=[]
     testfollowup = []
 
+    if memory == None:
+        return []
+
+    dbfile = memory[1]
+    keyfile = memory[0]
+
     try:
-        clientlist = getAllClients()
+        clientlist = getAllClients(dbfile)
         if clientlist == []:
             return []
         for client in clientlist:
             clientnum, tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = client
 
+            status = decrypt(keyfile,password,status)
+
             #Prevent Closed clients from being followed up
             if status == 'closed':
                 pass
 
-            saleslist = getSalesByClient(clientnum)
+            saleslist = getSalesByClient(clientnum,dbfile)
             if saleslist == []:
                 payDate = date(2099,12,30)
                 Paid = True
@@ -487,10 +578,24 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
             else:
                 for sale in saleslist:
                     Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,dispensedate,Paid,payDate,Amount,aidstat,quan,msrp = sale
+
+                    Paid = decrypt(keyfile,password,Paid)
+                    Amount = decrypt(keyfile,password,Amount)
+                    
                     if Invoice is not None and Paid == "Yes" and Amount is not None:
                         pass
                     else:
                         Invoice,clientnumber,Make,Model,Type,Lserial,Rserial,dispensedate,Paid,payDate,Amount,aidstat,quan,msrp = sale
+                        Paid = decrypt(keyfile,password,Paid)
+                        Amount = decrypt(keyfile,password,Amount)
+
+            followupdate = decrypt(keyfile,password,followupdate)
+            Hearingtestdate = decrypt(keyfile,password,Hearingtestdate)
+            try:
+                dispensedate = decrypt(keyfile,password,dispensedate)
+            except:
+                #For some reason the dispense date is not encrypted here
+                dispensedate = dispensedate
 
             #,hasHearingAid,hearingAidModel,ProsoundPurchase,Prosoundpurchasedate
             date_object = datetime.strptime(followupdate, '%Y-%m-%d').date()
@@ -509,8 +614,8 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
                 newrow = dbc.Row([
                     dbc.Col([dbc.Label(tablefirstname)],width=1),
                     dbc.Col([dbc.Label(tablelastname)],width=1),
-                    dbc.Col([dbc.Label(email)],width=3),
-                    dbc.Col([dbc.Label(phone)],width=3),
+                    dbc.Col([dbc.Label(decrypt(keyfile,password,email))],width=3),
+                    dbc.Col([dbc.Label(decrypt(keyfile,password,phone))],width=3),
                     dbc.Col([dbc.Badge("Routine Follow Up",id={'type':'followUpBadge','index':clientnum},color="primary", text_color="white",pill=True, className="ms-1")],width=2),
                     dbc.Col([
                         dbc.Button(id={'type':'followButton','index':clientnum},n_clicks=0,children=["Followed Up"])
@@ -521,8 +626,8 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
                 newrow = dbc.Row([
                     dbc.Col([dbc.Label(tablefirstname)],width=1),
                     dbc.Col([dbc.Label(tablelastname)],width=1),
-                    dbc.Col([dbc.Label(email)],width=3),
-                    dbc.Col([dbc.Label(phone)],width=3),
+                    dbc.Col([dbc.Label(decrypt(keyfile,password,email))],width=3),
+                    dbc.Col([dbc.Label(decrypt(keyfile,password,phone))],width=3),
                     dbc.Col([dbc.Badge("Payment Follow",id={'type':'followUpBadgePay','index':clientnum},color="danger", text_color="primary",pill=True, className="ms-1")],width=2),
                     dbc.Col([
                         dbc.Button(id={'type':'followButton','index':clientnum},n_clicks=0,children=["Followed Up"])
@@ -533,8 +638,8 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
                 newrow = dbc.Row([
                     dbc.Col([dbc.Label(tablefirstname)],width=1),
                     dbc.Col([dbc.Label(tablelastname)],width=1),
-                    dbc.Col([dbc.Label(email)],width=3),
-                    dbc.Col([dbc.Label(phone)],width=3),
+                    dbc.Col([dbc.Label(decrypt(keyfile,password,email))],width=3),
+                    dbc.Col([dbc.Label(decrypt(keyfile,password,phone))],width=3),
                     dbc.Col([dbc.Badge("Hearing Aid Follow",id={'type':'followUpBadgeHear','index':clientnum},color="blue", text_color="white",pill=True, className="ms-1")],width=2),
                     dbc.Col([
                         dbc.Button(id={'type':'followButton','index':clientnum},n_clicks=0,children=["Followed Up"])
@@ -547,8 +652,8 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
                 newrow = dbc.Row([
                     dbc.Col([dbc.Label(tablefirstname)],width=1),
                     dbc.Col([dbc.Label(tablelastname)],width=1),
-                    dbc.Col([dbc.Label(email)],width=3),
-                    dbc.Col([dbc.Label(phone)],width=3),
+                    dbc.Col([dbc.Label(decrypt(keyfile,password,email))],width=3),
+                    dbc.Col([dbc.Label(decrypt(keyfile,password,phone))],width=3),
                     dbc.Col([dbc.Badge("Hearing Test Follow",id={'type':'followUpBadgeTest','index':clientnum},color="green", text_color="primary",pill=True, className="ms-1")],width=2),
                     dbc.Col([
                         dbc.Button(id={'type':'followButton','index':clientnum},n_clicks=0,children=["Followed Up"])
@@ -568,13 +673,19 @@ def populateFollowUps(clicks,routsetting,paysetting,hearsetting,testsetting):
 @app.callback(
     Output({'type':'followClientRow','index':MATCH},"style"),
     Input({'type':'followButton','index':MATCH},"n_clicks"),
+    State("memory-output","data"),
+    State('passwordEnter','value'),
     prevent_initial_call=True
 )
 
-def clientFollowUp(clicks):
+def clientFollowUp(clicks,memory,password):
+    db = memory[1]
+    key = memory[0]
+
     trigger = ctx.triggered_id
     clinum = trigger['index']
-    updated = updateClientbyNum(clinum)
+
+    updated = updateClientbyNum(clinum,db,key,password)
     if updated:
         return {'display':'None'}
     else:
@@ -591,13 +702,15 @@ def clientFollowUp(children):
     return str(len(children))
 
 #UPLOADS CLIENTS IN BATCH LIST (WIP)
+#NEEDS ENCRYPTION
 
 @app.callback(
     Output('ClientUploadConfirm',"is_open"),
-    Input('ClientsUpload',"contents")
+    Input('ClientsUpload',"contents"),
+    State("memory-output","data")
 )
 
-def uploadclients(contents):
+def uploadclients(contents,memory):
     if contents is None:
         return False
     dataframe = readExcel(contents)
@@ -607,7 +720,7 @@ def uploadclients(contents):
     clientdata = dataframe.iloc[:,:15]
 
     #Creates Client Dataframe
-    clientnumber = getClientNum(3)
+    clientnumber = getClientNum(3,memory[1])
 
     clientnumberlist = []
     clientnumberlist.append(clientnumber)
@@ -642,16 +755,18 @@ def uploadclients(contents):
 
 @app.callback(
     Output('DataUploadConfirm',"is_open"),
-    Input('DataUpload',"contents")
+    Input('DataUpload',"contents"),
+    State("memory-output","data")
 )
     
-def dataUpload(contents):
+def dataUpload(contents,memory):
     if contents is None:
         return False
     else:
+        db = memory[1]
         today = date.today()
         dataframe = readExcel(contents)
-        cnx = sqlite3.connect('database.db')
+        cnx = sqlite3.connect(db)
         dataframe['dateadded'] = today
         dataframe.to_sql(name='MSRP',con=cnx,if_exists="append",index=False)
         return True
@@ -685,17 +800,20 @@ def dataUpload(contents):
     Output("changeMSRP", "value"),
     Input('changeQuan', "value"),
     State('changeHearingAidType','value'),
-    State('changeHearingAidModel','value')
+    State('changeHearingAidModel','value'),
+    #SECURITY FEATURES
+    State('passwordEnter','value'),
+    State("memory-output","data"),
     )
 
-def getMSRP(quan,typea,model):
+def getMSRP(quan,typea,model,password,memory):
     if typea == None or quan == None or model == None:
         return None
     else:
         quan = int(quan)
         hearingaidlist = []
-        db_file = 'database.db'
-        if createDatabase():
+        db_file = memory[1]
+        if createDatabase(db_file):
             with sqlite3.connect(db_file) as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT * FROM MSRP")

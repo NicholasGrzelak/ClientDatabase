@@ -5,6 +5,10 @@ from dateutil.relativedelta import relativedelta
 import base64
 import io
 import pandas as pd
+import hashlib
+import pickle
+import pyAesCrypt
+from cryptography.fernet import Fernet
 
 def toggle_modal(n1, is_open):
     if n1:
@@ -20,9 +24,8 @@ def unhide(value):
 def checkfile(filename):
     return os.path.exists(filename)
 
-def createDatabase():
-    db_file = 'database.db'
-    if checkfile('database.db'):
+def createDatabase(dbfile):
+    if checkfile(dbfile):
         return True
     else:
         schema_file = 'ClientSchema.sql'
@@ -34,15 +37,18 @@ def createDatabase():
             schemapay = rfp.read()
         with open(data_file,'r') as rfp:
             schemadata = rfp.read()
-        with sqlite3.connect(db_file) as conn:
+        with sqlite3.connect(dbfile) as conn:
             conn.executescript(schemacli)
             conn.executescript(schemapay)
             conn.executescript(schemadata)
         return True
-    
-def getClient(firstname,lastname):
+
+#
+"""GETTING CLIENT DATA FUNCTIONS PAST THIS POINT"""
+#
+
+def getClient(firstname,lastname,db_file,keyfile,password):
     """Gets client data using first and last name"""
-    db_file = 'database.db'
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM clients WHERE firstname = ? AND lastname= ?",(firstname,lastname))
@@ -53,8 +59,7 @@ def getClient(firstname,lastname):
                 return clientnum,tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status
     #error clause here
 
-def getAllClients():
-    db_file = 'database.db'
+def getAllClients(db_file):
     Clientlist = []
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
@@ -67,21 +72,20 @@ def getClientByNum(num):
     db_file = 'database.db'
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM clients WHERE clientid",num)
+        cursor.execute("SELECT * FROM clients WHERE clientid = ?",num)
         for row in cursor.fetchall():
             clientnum, tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,dateofvisit,followupdate,hasHearingTestdate,Hearingtestdate,clientnotes,status = row
             return clientnum,tablefirstname,tablelastname,email,phone,address,postal,city,province,healthcard,clientnotes,status
         
-def updateClientbyNum(ID):
+def updateClientbyNum(ID,db_file,keyfile,password):
     if ID == None:
         return False
     else:
         ID = str(ID)
     today = date.today()
     dmy = today.strftime("%Y-%m-%d")
-    followupdate = (dmy,)
-    db_file = 'database.db'
-    if createDatabase():
+    followupdate = (encrypt(keyfile,password,dmy))
+    if createDatabase(db_file):
         with sqlite3.connect(db_file) as conn:
             cursor = conn.cursor()
             cursor.execute("UPDATE clients SET datefollowup = ? WHERE clientid = " +ID,followupdate)
@@ -119,9 +123,8 @@ def generateDate(dof,datesetting):
     else:
         return dof
     
-def getSalesByClient(clientnumber):
+def getSalesByClient(clientnumber,db_file):
     """Query the database to find all sales matching a client"""
-    db_file = 'database.db'
     clientnumber = str(clientnumber)
     with sqlite3.connect(db_file) as conn:
         cursor = conn.cursor()
@@ -143,7 +146,7 @@ def findType(Model):
         return []
     db_file = 'database.db'
     Outputlist=[]
-    if createDatabase():
+    if createDatabase(db_file):
         with sqlite3.connect(db_file) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM MSRP")
@@ -160,7 +163,7 @@ def findMake(manuf):
         return []
     db_file = 'database.db'
     Outputlist=[]
-    if createDatabase():
+    if createDatabase(db_file):
         with sqlite3.connect(db_file) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM MSRP")
@@ -172,10 +175,10 @@ def findMake(manuf):
                         Outputlist.append(make)
             return Outputlist
         
-def getClientNum(clicks):
+def getClientNum(clicks,db_file):
     #Make Database here
-    if createDatabase():
-        allclients = getAllClients()
+    if createDatabase(db_file):
+        allclients = getAllClients(db_file)
         #print('allclients: ',allclients)
         if allclients == []:
             return 100
@@ -192,3 +195,54 @@ def getClientNum(clicks):
         with sqlite3.connect(db_file) as conn:
             conn.executescript(schema)
         return 100 """
+    
+#
+""" THIS IS ALL FOR ENCRYPTION AND SECURITY FROM THIS POINT DOWN"""
+#
+
+def hashInput(input):
+    output = hashlib.sha256(input.encode()).hexdigest()
+    return output
+
+def readKey(filename,password):
+    f = pickle.load(open(filename,'rb'))
+
+    fdec = io.BytesIO()
+    fCiph = io.BytesIO(f)
+
+    # decrypt stream
+    pyAesCrypt.decryptStream(fCiph, fdec, password)
+    return fdec.getvalue()
+
+def decrypt(keyname,password,data):
+    #print(data)
+    key = readKey(keyname,password)
+    f = Fernet(key)
+    output = f.decrypt(data).decode()
+    return output
+
+def decryptList(keyname,password,listdata):
+    outputlist = []
+    for item in listdata:
+        decrypteditem = decrypt(keyname,password,item)
+        outputlist.append(decrypteditem)
+    return outputlist
+
+def encrypt(keyname,password,data):
+    data = str(data)
+    key = readKey(keyname,password)
+    f = Fernet(key)
+    output = f.encrypt(data.encode())
+    return output
+
+def encryptList(keyname,password,listdata):
+    outputlist = []
+    for item in listdata:
+        encrypteditem = encrypt(keyname,password,item)
+        outputlist.append(encrypteditem)
+    return outputlist
+
+def encryptTuple(keyname,password,listdata):
+    data = list(listdata[0])
+    output = tuple(encryptList(keyname,password,data))
+    return [output]

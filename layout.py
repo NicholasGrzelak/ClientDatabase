@@ -470,6 +470,8 @@ taskListModal = dbc.Modal([
     dbc.ModalFooter(),
 ],id='taskListModal',is_open=False,size="xl")
 
+#LOGIN MODAL
+
 loginModal = dbc.Modal([
     dbc.ModalHeader(dbc.ModalTitle("Login"),close_button=False),
     dbc.ModalBody([
@@ -555,7 +557,9 @@ layout = dbc.Container([
                 id="followUpButton")]
             ,style={'textAlign':'center'}),
     ],justify="end",class_name='g-0'),
-    dbc.Row([ClientModal,FollowupModal,settingsModal,taskListModal,hearingaidmodal,loginModal],style={'margin-bottom':'20px'},),
+    dbc.Row([ClientModal,FollowupModal,settingsModal,taskListModal,hearingaidmodal,loginModal,
+                dcc.Store(id='memory-output')
+            ],style={'margin-bottom':'20px'},),
     dbc.Row([
         dbc.Col([dbc.Button(["Filters (WIP)"],id="ClientSelectFilter")],md={"size":3,'offset':1},style={'textAlign':'right'}),
         dbc.Col([dcc.Dropdown(id="ClientSelectDropdown",options=['A',"B"])],md={"size":4}),
