@@ -246,3 +246,16 @@ def encryptTuple(keyname,password,listdata):
     data = list(listdata[0])
     output = tuple(encryptList(keyname,password,data))
     return [output]
+
+def encryptDf(keyname,password,df):
+    encryptdict = {}
+
+    for column in df:
+        columnlist = df[column].tolist()
+        columnlist = encryptList(keyname,password,columnlist)
+        #print(columnlist)
+        encryptdict[column] = columnlist
+
+    encdf = pd.DataFrame.from_dict(encryptdict)
+
+    return encdf

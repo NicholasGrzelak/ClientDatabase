@@ -1,6 +1,3 @@
-from hashlib import new
-from tkinter import Y
-from weakref import ref
 from dash import Output,Input,MATCH,State,ctx,dcc,ALL
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -380,6 +377,7 @@ def displaydata(client,password,memory):
         #DECIDES WHICH SALE IS DIPLAYED
         #Sets inital Values
         Invoice,clientnumber,Make,Model,Typea,Lserial,Rserial,dispensdate,Paid,Date,Amount,aidstatus,quan,msrp = saleslist[0]
+        aidstatus = decrypt(keyfile,password,aidstatus)
         for sale in saleslist:
             #Gets values of each Sale
             newInvoice,newclientnumber,newMake,newModel,newTypea,newLserial,newRserial,newdispensdate,newPaid,newDate,newAmount,newaidstatus,newquan,newmsrp = sale
@@ -707,20 +705,24 @@ def clientFollowUp(children):
 @app.callback(
     Output('ClientUploadConfirm',"is_open"),
     Input('ClientsUpload',"contents"),
-    State("memory-output","data")
+    State("memory-output","data"),
+    State('passwordEnter','value'),
 )
 
-def uploadclients(contents,memory):
+def uploadclients(contents,memory,password):
     if contents is None:
         return False
     dataframe = readExcel(contents)
+
+    db = memory[1]
+    key = memory[0]
 
     #Splits Dataframe
     salesdata = dataframe.iloc[:,15:]
     clientdata = dataframe.iloc[:,:15]
 
     #Creates Client Dataframe
-    clientnumber = getClientNum(3,memory[1])
+    clientnumber = getClientNum(3,db)
 
     clientnumberlist = []
     clientnumberlist.append(clientnumber)
@@ -729,13 +731,12 @@ def uploadclients(contents,memory):
         newnumber = newnumber+1
         clientnumberlist.append(newnumber)
 
-    clientdata.insert(0,'clientid',clientnumberlist,True)
     clientdata['datevisit'] = clientdata['datevisit'].dt.strftime("%Y-%m-%d")
     clientdata['datefollowup'] = clientdata['datefollowup'].dt.strftime("%Y-%m-%d")
     clientdata['datetest'] = clientdata['datetest'].dt.strftime("%Y-%m-%d")
 
     #Creates Sales Dataframe
-    salesdata.insert(1,'clientnumber',clientnumberlist,True)
+    salesdata.insert(0,'clientnumber',clientnumberlist,True)
 
     #Drops non invoice sales data
     salesdata.dropna(subset=['invoicenumber'],inplace=True)
@@ -744,8 +745,36 @@ def uploadclients(contents,memory):
     salesdata['dispensedate'] = salesdata['dispensedate'].dt.strftime("%Y-%m-%d")
     salesdata['paymentdate'] = salesdata['paymentdate'].dt.strftime("%Y-%m-%d")
 
+    #Encrypts dfs
+    #sales need to encrypt everything except first two, invoice and client number
+    #print('1')
+    encSalesDf = salesdata.iloc[:,1:]
+    invoicedata = salesdata['invoicenumber']
+    clientnumdata = salesdata['clientnumber']
+    salesdata = encryptDf(key,password,encSalesDf)
+    #print('2')
+    salesdata.insert(0,'clientnumber',clientnumdata,True)
+    salesdata.insert(0,'invoicenumber',invoicedata,True)
+
+    #clients encrypt everything except first three, client id, firt and last
+    #print('3')
+    encClientData = clientdata.iloc[:,2:]
+    firstname = clientdata['firstname']
+    lastname = clientdata['lastname']
+    clientdata = encryptDf(key,password,encClientData)
+    clientdata.insert(0,'lastname',lastname,True)
+    clientdata.insert(0,'firstname',firstname,True)
+    clientdata.insert(0,'clientid',clientnumberlist,True)
+
+    #`b'gAAAAABk06cjZpa6ddEa4BOPf-5YqO8lFQeJ6UD6hRs9xKdTAJjsLU2RllfGZEHJjBKuVCbuHNf2uPG4iW9HG1WscbwNSoeAIA=='
+
+    #print('salesdata')
+    #print(salesdata)
+    #print('clientdata')
+    #print(clientdata)
+
     #Writes to Dataframe
-    cnx = sqlite3.connect('database.db')
+    cnx = sqlite3.connect(db)
     salesdata.to_sql(name='sales',con=cnx,if_exists="append",index=False)
     clientdata.to_sql(name='clients',con=cnx,if_exists="append",index=False)
 
